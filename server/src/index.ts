@@ -8,6 +8,7 @@ import meetingRoutes from './routes/meetingRoutes.ts'
 import inviteRoutes from './routes/inviteRoutes.ts'
 import notificationRoutes from './routes/notificationRoutes.ts'
 import { initChatHub } from './hubs/chatHubs.ts'
+import { initMeetingHub } from './hubs/meetingHubs.ts'
 
 const app = express()
 const httpServer = createServer(app)
@@ -21,6 +22,7 @@ app.use('/api', inviteRoutes)
 app.use('/api', notificationRoutes)
 
 initChatHub(io)
+initMeetingHub(io)
 
 httpServer.listen(3000, () => {
   console.log('Server running on port 3000')
