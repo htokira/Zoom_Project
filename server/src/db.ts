@@ -1,7 +1,7 @@
 import sql from 'mssql'
 
 const config: sql.config = {
-  server: 'DESKTOP-NRKG6E3',
+  server: 'DESKTOP-PII8VFF',
   database: 'Zoom',
   user: 'zoom_user',
   password: 'Password123!',
