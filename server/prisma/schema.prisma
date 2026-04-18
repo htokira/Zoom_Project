@@ -37,8 +37,8 @@ model ChatMember {
   chatId   Int
   userId   Int 
   joinedAt DateTime? @default(now())
-  chat     Chat      @relation(fields: [chatId], references: [id])
-  user     User      @relation(fields: [userId], references: [id])
+  chat     Chat      @relation(fields: [chatId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user     User      @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("ChatMembers")
 }
@@ -87,8 +87,8 @@ model MeetingInvite {
   meetingId Int?
   userId    Int?
   status    String? @db.NVarChar(20)
-  meeting   Meeting? @relation(fields: [meetingId], references: [id])
-  user      User?    @relation(fields: [userId], references: [id])
+  meeting   Meeting? @relation(fields: [meetingId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("MeetingInvites")
 }
