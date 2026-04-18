@@ -22,13 +22,25 @@ router.post('/register', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
-        await pool.request()
+        const result = await pool.request()
             .input('Username', username)
             .input('Email', email)
             .input('Password', passwordHash)
-            .query('INSERT INTO Users (Username, Email, Password) VALUES (@Username, @Email, @Password)');
+            .query('INSERT INTO Users (Username, Email, Password) OUTPUT INSERTED.Id VALUES (@Username, @Email, @Password)');
 
-        res.status(201).json({ message: 'Користувача успішно створено' });
+        const newUserId = result.recordset[0].Id;
+
+        const token = jwtLib.sign(
+            { id: newUserId, username, email },
+            secret_key,
+            { expiresIn: '24h' }
+        );
+
+        res.status(201).json({ 
+            message: 'Користувача успішно створено',
+            token,
+            user: { id: newUserId, username, email }
+        });
     } catch (error) {
         console.error('Помилка реєстрації:', error);
         res.status(500).json({ message: 'Внутрішня помилка сервера' });

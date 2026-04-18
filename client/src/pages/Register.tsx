@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../App.css';
 import axios from 'axios';
 
@@ -7,6 +7,7 @@ export default function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,10 +17,15 @@ export default function Register() {
         email,
         password
       });
-      console.log('Успіх:', response.data);
+      console.log('Успішна реєстрація та вхід:', response.data);
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+
       alert('Реєстрація успішна!');
+      navigate('/dashboard'); 
+
     } catch (error) {
-      console.error('Помилка:', error);
+      console.error('Помилка реєстрації:', error);
       alert('Помилка реєстрації!');
     }
   };
