@@ -42,6 +42,9 @@ export default function Register() {
   return (
     <div className="auth-page">
       <div className="auth-card">
+        <div className="gif-container">
+          <img src="/cat2.gif" alt="cat" />
+        </div>
         <h2 className="auth-title">Реєстрація</h2>
         
         <form onSubmit={handleSubmit} className="auth-form">
