@@ -10,6 +10,13 @@ router.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
         const pool = getPool();
+        
+        const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!_\-?]).{8,}$/;
+        if (!passwordRegex.test(password)) {
+            return res.status(400).json({ 
+                message: 'Пароль не відповідає вимогам мінімум 8 символів, 1 велика літера, 1 цифра, 1 спецсимвол (! _ - ?)' 
+            });
+        }
 
         const userExists = await pool.request()
             .input('Email', email)

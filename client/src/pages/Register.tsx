@@ -7,10 +7,19 @@ export default function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError('');
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!_\-?]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setPasswordError('Пароль має містити мінімум 8 символів, 1 велику літеру, 1 цифру та 1 спецсимвол (! _ - ?)');
+      return;
+    }
+
     try {
       const response = await axios.post('http://localhost:3000/api/auth/register', {
         username,
@@ -70,6 +79,11 @@ export default function Register() {
               className="auth-input"
               placeholder="••••••••"
             />
+            {passwordError && (
+              <p style={{ color: '#8a0d0d', fontSize: '13px', marginTop: '4px' }}>
+                {passwordError}
+              </p>
+            )}
           </div>
 
           <button type="submit" className="auth-button success">
