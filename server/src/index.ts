@@ -9,6 +9,7 @@ import meetingRoutes from './routes/meetingRoutes.ts'
 import inviteRoutes from './routes/inviteRoutes.ts'
 import notificationRoutes from './routes/notificationRoutes.ts'
 import { initChatHub } from './hubs/chatHubs.ts'
+import authRoutes from './routes/authRoutes.ts'
 import { initMeetingHub } from './hubs/meetingHubs.ts'
 
 const app = express()
@@ -20,8 +21,10 @@ const io = new Server(httpServer, {
   }
 });
 
-app.use(cors());
-app.use(express.json())
+app.use(cors())                     
+app.use(express.json())          
+app.use('/api/auth', authRoutes)
+
 app.use('/api', chatRoutes)
 app.use('/api', fileRoutes)
 app.use('/api', meetingRoutes)
