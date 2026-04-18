@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int              @id @default(autoincrement())
+  username       String           @db.NVarChar(50)
+  email          String?          @db.NVarChar(100)
+  password       String           @db.NVarChar(255)
+  chatMembers    ChatMember[]     
+  meetings       Meeting[]
+  invites        MeetingInvite[] 
+  messages       Message[]
+  notifications  Notification[]
+
+  @@map("Users")
+}
+
+model Chat {
+  id          Int          @id @default(autoincrement())
+  name        String?      @db.NVarChar(200)
+  type        String       @db.NVarChar(20)
+  createdAt   DateTime?    @default(now())
+  members     ChatMember[]
+  messages    Message[]
+
+  @@map("Chats")
+}
+
+model ChatMember {
+  id       Int       @id @default(autoincrement())
+  chatId   Int
+  userId   Int 
+  joinedAt DateTime? @default(now())
+  chat     Chat      @relation(fields: [chatId], references: [id])
+  user     User      @relation(fields: [userId], references: [id])
+
+  @@map("ChatMembers")
+}
+
+model Message {
+  id        Int       @id @default(autoincrement())
+  chatId    Int 
+  senderId  Int 
+  text      String?   @db.NVarChar(Max)
+  sentAt    DateTime? @default(now())
+  isDeleted Boolean?  @default(false)
+  chat      Chat      @relation(fields: [chatId], references: [id])
+  sender    User      @relation(fields: [senderId], references: [id])
+  files     File[]
+
+  @@map("Messages")
+}
+
+model File {
+  id        Int     @id @default(autoincrement())
+  messageId Int?
+  fileName  String  @db.NVarChar(200)
+  filePath  String  @db.NVarChar(500)
+  fileSize  Int
+  fileType  String  @db.NVarChar(100)
+  message   Message? @relation(fields: [messageId], references: [id])
+
+  @@map("Files")
+}
+
+model Meeting {
+  id           Int             @id @default(autoincrement())
+  title        String          @db.NVarChar(200)
+  scheduledAt  DateTime
+  createdBy    Int?
+  roomCode     String          @db.NVarChar(20)
+  reminderSent Boolean?        @default(false)
+  creator      User?           @relation(fields: [createdBy], references: [id])
+  invites      MeetingInvite[]
+
+  @@map("Meetings")
+}
+
+model MeetingInvite {
+  id        Int     @id @default(autoincrement())
+  meetingId Int?
+  userId    Int?
+  status    String? @db.NVarChar(20)
+  meeting   Meeting? @relation(fields: [meetingId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("MeetingInvites")
+}
+
+model Notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int?
+  type      String    @db.NVarChar(50)
+  payload   String?   @db.NVarChar(500)
+  isRead    Boolean?  @default(false)
+  createdAt DateTime? @default(now())
+  user      User?     @relation(fields: [userId], references: [id])
+
+  @@map("Notifications")
+}

@@ -1,28 +1,14 @@
-import sql from 'mssql'
+import { PrismaClient } from '@prisma/client'
 
-const config: sql.config = {
-  server: 'DESKTOP-NRKG6E3', //DESKTOP-PII8VFF
-  database: 'Zoom',
-  user: 'zoom_user',
-  password: 'Password123!',
-  options: {
-    trustServerCertificate: true,
-    encrypt: false
-  }
-}
-
-let pool: sql.ConnectionPool | null = null
+const prisma = new PrismaClient()
 
 export async function connectDB() {
   try {
-    pool = await sql.connect(config) 
-    console.log('Connected to DB')
+    await prisma.$connect()
+    console.log('Connected to DB via Prisma')
   } catch (error) {
     console.error('DB connection failed:', error)
   }
 }
 
-export function getPool() {
-    if (!pool) throw new Error('DB not connected')
-    return pool
-}
+export default prisma
