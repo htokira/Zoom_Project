@@ -1,15 +1,27 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../App.css';
+import axios from 'axios';
 
 export default function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Спроба реєстрації:', { username, email, password });
+    try {
+      const response = await axios.post('http://localhost:3000/api/auth/register', {
+        username,
+        email,
+        password
+      });
+      console.log('Успіх:', response.data);
+      alert('Реєстрація успішна!');
+    } catch (error) {
+      console.error('Помилка:', error);
+      alert('Помилка реєстрації!');
+    }
   };
 
   return (
@@ -26,7 +38,7 @@ export default function Register() {
               onChange={(e) => setUsername(e.target.value)}
               required
               className="auth-input"
-              placeholder="JohnDoe"
+              placeholder="YourNickname"
             />
           </div>
 
