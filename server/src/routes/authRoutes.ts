@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import jwtLib from 'jsonwebtoken';
-import { getPool } from '../db.ts';
+import prisma from '../db.ts';
 
 const router = Router();
 const secret_key = 'top_secret_3000_Dont_share';
@@ -9,7 +9,6 @@ const secret_key = 'top_secret_3000_Dont_share';
 router.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
-        const pool = getPool();
         
         const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!_\-?]).{8,}$/;
         if (!passwordRegex.test(password)) {
@@ -18,27 +17,27 @@ router.post('/register', async (req, res) => {
             });
         }
 
-        const userExists = await pool.request()
-            .input('Email', email)
-            .query('SELECT Id FROM Users WHERE Email = @Email');
+        const userExists = await prisma.user.findFirst({
+            where: { email }
+        });
 
-        if (userExists.recordset.length > 0) {
+        if (userExists) {
             return res.status(400).json({ message: 'Користувач з таким email вже існує!' });
         }
 
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
-        const result = await pool.request()
-            .input('Username', username)
-            .input('Email', email)
-            .input('Password', passwordHash)
-            .query('INSERT INTO Users (Username, Email, Password) OUTPUT INSERTED.Id VALUES (@Username, @Email, @Password)');
-
-        const newUserId = result.recordset[0].Id;
+        const newUser = await prisma.user.create({
+            data: {
+                username,
+                email,
+                password: passwordHash
+            }
+        });
 
         const token = jwtLib.sign(
-            { id: newUserId, username, email },
+            { id: newUser.id, username: newUser.username, email: newUser.email },
             secret_key,
             { expiresIn: '24h' }
         );
@@ -46,7 +45,7 @@ router.post('/register', async (req, res) => {
         res.status(201).json({ 
             message: 'Користувача успішно створено',
             token,
-            user: { id: newUserId, username, email }
+            user: { id: newUser.id, username: newUser.username, email: newUser.email }
         });
     } catch (error) {
         console.error('Помилка реєстрації:', error);
@@ -57,30 +56,30 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        const pool = getPool();
 
-        const result = await pool.request()
-            .input('Email', email)
-            .query('SELECT * FROM Users WHERE Email = @Email');
-
-        const user = result.recordset[0];
+        const user = await prisma.user.findFirst({
+            where: { email }
+        });
 
         if (!user) {
             return res.status(400).json({ message: 'Невірний email або пароль!' });
         }
 
-        const validPassword = await bcrypt.compare(password, user.Password);
+        const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
             return res.status(400).json({ message: 'Невірний email або пароль!' });
         }
 
         const token = jwtLib.sign(
-            { id: user.Id, username: user.Username, email: user.Email },
+            { id: user.id, username: user.username, email: user.email },
             secret_key,
             { expiresIn: '24h' }
         );
 
-        res.json({ token, user: { id: user.Id, username: user.Username, email: user.Email } });
+        res.json({ 
+            token, 
+            user: { id: user.id, username: user.username, email: user.email } 
+        });
     } catch (error) {
         console.error('Помилка логіну:', error);
         res.status(500).json({ message: 'Внутрішня помилка сервера' });
