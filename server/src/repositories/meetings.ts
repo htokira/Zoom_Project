@@ -1,6 +1,6 @@
 import prisma from '../db.ts'
 
-export async function createMeeting(title: string, scheduledAt: Date, createdBy: number) {
+export async function createMeeting(title: string, scheduledAt: string, createdBy: number) {
     const roomCode = Math.random().toString(36).substring(2, 8);
     
     const meeting = await prisma.meeting.create({
@@ -12,16 +12,22 @@ export async function createMeeting(title: string, scheduledAt: Date, createdBy:
         }
     });
 
-    return meeting.id;
+    return meeting;
 }
 
 export async function getMeetingByUserId(userId: number) {
     return await prisma.meeting.findMany({
         where: {
-            invites: {
-                some: { userId }
-            }
-        }
+            OR: [
+                { createdBy: userId },
+                {
+                    invites: {
+                        some: { userId }
+                    }
+                }
+            ]
+        },
+        orderBy: { scheduledAt: 'asc' }
     });
 }
 

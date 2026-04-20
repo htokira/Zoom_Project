@@ -76,6 +76,7 @@ model Meeting {
   createdBy    Int?
   roomCode     String @unique  @db.NVarChar(20)
   reminderSent Boolean?        @default(false)
+  chatId       Int?            
   creator      User?           @relation(fields: [createdBy], references: [id])
   invites      MeetingInvite[]
 
