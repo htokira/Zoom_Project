@@ -3,10 +3,10 @@ import cors from 'cors'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import { connectDB } from './db.ts'
-import chatRoutes from './routes/chatRoutes.ts'
+import { initChatRoutes } from './routes/chatRoutes.ts'
 import fileRoutes from './routes/fileRoutes.ts'
 import meetingRoutes from './routes/meetingRoutes.ts'
-import inviteRoutes from './routes/inviteRoutes.ts'
+import { initInviteRoutes } from './routes/inviteRoutes.ts'
 import notificationRoutes from './routes/notificationRoutes.ts'
 import { initChatHub } from './hubs/chatHubs.ts'
 import authRoutes from './routes/authRoutes.ts'
@@ -25,10 +25,10 @@ app.use(cors())
 app.use(express.json())          
 app.use('/api/auth', authRoutes)
 
-app.use('/api', chatRoutes)
+app.use('/api', initChatRoutes(io))
 app.use('/api', fileRoutes)
 app.use('/api', meetingRoutes)
-app.use('/api', inviteRoutes)
+app.use('/api', initInviteRoutes(io))
 app.use('/api', notificationRoutes)
 
 initChatHub(io)
