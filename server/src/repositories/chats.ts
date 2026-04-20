@@ -1,6 +1,6 @@
 import prisma from '../db.ts'
 
-export async function createChat(name: string, memberIds: number[], type: 'group' | 'private' = 'group') {
+export async function createChat(name: string, memberIds: number[], type: 'group' | 'private' | 'meeting' = 'group') {
     const chat = await prisma.chat.create({
         data: {
             name: name || null,
@@ -28,22 +28,28 @@ export async function saveMessage(chatId: number, senderId: number, text: string
 
 
 export async function getChatByUserId(userId: number) {
-    return await prisma.chat.findMany({
-        where: {
-            members: {
-                some: { userId }
-            }
-        }
+    const members = await prisma.chatMember.findMany({
+        where: { userId: userId },
+        include: { chat: true }
     });
+    return members.map((m: any) => m.chat);
 }
 
 export async function getMessages(chatId: number, skip: number, take: number) {
     return await prisma.message.findMany({
         where: { chatId },
-        orderBy: { sentAt: 'desc' },
+        orderBy: { sentAt: 'asc' },
         skip,
-        take
-    });
+        take,
+        include: {
+            sender: {
+                select: {
+                    id: true,
+                    username: true
+                }
+            }
+        }
+    })
 }
 
 export async function createPrivateChat(userId1: number, userId2: number) {
