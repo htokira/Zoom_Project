@@ -62,17 +62,29 @@ function App() {
             style={{ padding: '12px 32px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', width: '200px', fontSize: '16px' }}>
             🔔 Сповіщення
           </button>
-          <button onClick={async () => {
-            const user = JSON.parse(localStorage.getItem('user') || '{}')
-            const res = await axios.post('http://localhost:3000/api/meetings', {
-                title: 'Швидка зустріч',
-                scheduledAt: new Date().toISOString(),
-                createdBy: user.id
-            })
-            localStorage.setItem('meetingChatId', String(res.data.chatId))
-            window.location.href = `/room/${res.data.roomCode}`
-        }}
-            style={{ padding: '12px 32px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', width: '200px', fontSize: '16px' }}>
+          <button 
+            onClick={async () => {
+              const userData = localStorage.getItem('user');
+              if (!userData) {
+                  alert('Помилка: користувач не авторизований');
+                  return;
+              }
+              const user = JSON.parse(userData);
+
+              const futureDate = new Date();
+              futureDate.setMinutes(futureDate.getMinutes() + 1);
+
+              const res = await axios.post('http://localhost:3000/api/meetings', {
+                  title: 'Швидка зустріч',
+                  scheduledAt: futureDate.toISOString(),
+                  createdBy: user.id
+              });
+
+              localStorage.setItem('meetingChatId', String(res.data.chatId));
+              window.location.href = `/room/${res.data.roomCode}`;
+            }}
+            style={{ padding: '12px 32px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', width: '200px', fontSize: '16px' }}
+          >
             🎥 Швидка зустріч
           </button>
       </div>
