@@ -1,7 +1,4 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import axios from 'axios'
 import './App.css'
 import { Routes, Route, Navigate } from 'react-router-dom';
@@ -17,6 +14,7 @@ import { io } from 'socket.io-client'
 const globalSocket = io('http://localhost:3000')
 
 function App() {
+  const [joinCode, setJoinCode] = useState('');
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   useEffect(() => {
     if (!user.id) return
@@ -40,6 +38,16 @@ function App() {
       globalSocket.off('notification')
     }
   }, [])
+
+  const handleJoinByCode = () => {
+    if (joinCode.trim()) {
+      localStorage.removeItem('meetingChatId'); 
+      window.location.href = `/room/${joinCode.trim()}`;
+    } else {
+      alert('Будь ласка, введіть код кімнати');
+    }
+  };
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -87,6 +95,19 @@ function App() {
           >
             🎥 Швидка зустріч
           </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px', padding: '20px', background: '#f3f4f6', borderRadius: '12px' }}>
+            <input 
+              type="text" 
+              placeholder="Введіть код кімнати" 
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d1d5db', width: '250px', fontSize: '16px' }}
+            />
+            <button onClick={handleJoinByCode}
+              style={{ padding: '12px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}>
+              🔗 Приєднатися за кодом
+            </button>
+          </div>
       </div>
     } />
 
