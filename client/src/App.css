@@ -1,3 +1,4 @@
+/* АВТОРИЗАЦІЯ */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -96,7 +97,7 @@
 }
 
 .auth-link {
-  color: #ff6b6b; /* Коралове посилання */
+  color: #ff6b6b;
   font-weight: 800;
   text-decoration: none;
   transition: color 0.2s;
@@ -125,12 +126,198 @@
   color: #007bb5;
   font-weight: 600;
   text-align: center;
-  font-size: 14px;
-  padding: 10px;
 }
 
-.gif-container img {
+/* ГОЛОВНЕ МЕНЮ */
+
+.dashboard-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #7fd6ff 0%, #00b4db 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fdf5e6; 
+  padding: 16px 40px;
+  box-shadow: 0 4px 15px rgba(0, 75, 100, 0.15);
+}
+
+.dashboard-logo {
+  margin: 0;
+  color: #0b3d60;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.user-profile-widget {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.welcome-text {
+  color: #1a4f76;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.avatar-button {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: #ff6b6b; 
+  color: white;
+  border: 2px solid #fff;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(255, 107, 107, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 14px rgba(255, 107, 107, 0.6);
+}
+
+.dashboard-main {
+  flex: 1;
+  padding: 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  align-items: start;
+}
+
+.dashboard-card {
+  background-color: #fdf5e6;
+  padding: 32px;
+  border-radius: 20px;
+  box-shadow: 0 15px 25px rgba(0, 75, 100, 0.2);
+  text-align: center;
+  transition: transform 0.3s;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px); 
+}
+
+.dashboard-card h2 {
+  margin-top: 0;
+  color: #0b3d60;
+  margin-bottom: 24px;
+  font-size: 22px;
+}
+
+.join-form, .card-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e0cda7;
+  background-color: #ffffff;
+  border-radius: 12px;
+  font-size: 16px;
+  outline: none;
+  color: #333;
+  transition: border-color 0.3s;
+  text-align: center;
+}
+
+.dashboard-input:focus {
+  border-color: #00b4db;
+}
+
+.dash-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.primary-btn {
+  background-color: #007bb5;
+  color: white;
+  box-shadow: 0 4px 10px rgba(0, 123, 181, 0.3);
+}
+
+.primary-btn:hover {
+  background-color: #005f8f;
+  transform: translateY(-2px);
+}
+
+.success-btn {
+  background-color: #ff6b6b;
+  color: white;
+  box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
+}
+
+.success-btn:hover {
+  background-color: #e55050;
+  transform: translateY(-2px);
+}
+
+.secondary-btn {
+  background-color: white;
+  color: #007bb5;
+  border: 2px solid #007bb5; /* Біла кнопка з синім контуром */
+}
+
+.secondary-btn:hover {
+  background-color: #f0f8ff;
+  transform: translateY(-2px);
+}
+
+/* ПРОФІЛЬ */
+.profile-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #7fd6ff 0%, #00b4db 100%);
+  position: relative;
+  z-index: 1;
+}
+
+.profile-page::before {
+  content: '';
+  position: absolute;
+  width: 90%;
+  max-width: 450px;
+  height: 350px;
+  background-color: #fdf5e6;
+  border-radius: 20px;
+  box-shadow: 0 15px 25px rgba(0, 75, 100, 0.2);
+  z-index: -1;
+}
+
+.profile-page h2 {
+  color: #0b3d60;
+  margin-bottom: 24px;
+  font-size: 28px;
+}
+
+.profile-page p {
+  color: #1a4f76;
+  font-size: 18px;
+  margin: 10px 0;
 }
