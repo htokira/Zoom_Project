@@ -29,9 +29,9 @@ function App() {
     
     globalSocket.on('notification', (data: any) => {
       if (data.type === 'new_message') {
-        alert('Нове повідомлення в чаті!')
+        alert('💬 Нове повідомлення в чаті!')
       } else if (data.type === 'meeting_invite') {
-        alert(`Вас запрошено на зустріч: ${data.title}`)
+        alert(`📅 Вас запрошено на зустріч: ${data.title}`)
       }
     })
     
@@ -127,7 +127,7 @@ function App() {
                     className="dashboard-input"
                   />
                   <button onClick={handleJoinByCode} className="dash-btn primary-btn">
-                    Приєднатися
+                    🔗 Приєднатися
                   </button>
                 </div>
               </section>
@@ -136,10 +136,10 @@ function App() {
                 <h2>Мої зустрічі</h2>
                 <div className="card-buttons">
                   <button onClick={handleQuickMeeting} className="dash-btn success-btn">
-                    Швидка зустріч
+                    🎥 Швидка зустріч
                   </button>
                   <button onClick={() => navigate('/meetings')} className="dash-btn secondary-btn">
-                    Заплановані зустрічі
+                    📅 Заплановані зустрічі
                   </button>
                 </div>
               </section>
@@ -149,10 +149,10 @@ function App() {
               <section className="dashboard-card comms-card">
                 <div className="card-buttons">
                   <button onClick={() => navigate('/notifications')} className="dash-btn secondary-btn">
-                    Сповіщення
+                    🔔 Сповіщення
                   </button>
                   <button onClick={() => navigate('/chats')} className="dash-btn secondary-btn">
-                    Чати
+                    💬 Чати
                   </button>
                 </div>
               </section>
