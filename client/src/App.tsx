@@ -29,9 +29,9 @@ function App() {
     
     globalSocket.on('notification', (data: any) => {
       if (data.type === 'new_message') {
-        alert('💬 Нове повідомлення в чаті!')
+        alert('Нове повідомлення в чаті!')
       } else if (data.type === 'meeting_invite') {
-        alert(`📅 Вас запрошено на зустріч: ${data.title}`)
+        alert(`Вас запрошено на зустріч: ${data.title}`)
       }
     })
     
@@ -93,8 +93,10 @@ function App() {
           <h2>Налаштування профілю</h2>
           <p>Користувач: <strong>{user.username}</strong></p>
           <p>Email: <strong>{user.email}</strong></p>
-          <button onClick={handleLogout} className="logout-button">Вийти з акаунту</button>
-          <button onClick={() => navigate('/dashboard')} className="back-button">Назад у меню</button>
+          <div className="profile-buttons">
+            <button onClick={handleLogout} className="dash-btn success-btn">Вийти з акаунту</button>
+            <button onClick={() => navigate('/dashboard')} className="dash-btn secondary-btn">Назад у меню</button>
+          </div>
         </div>
       } />
 
@@ -102,7 +104,7 @@ function App() {
         <div className="dashboard-container">
           
           <header className="dashboard-header">
-            <h1 className="dashboard-logo">Zoom</h1>
+            <h1 className="dashboard-logo">Zoom Clone</h1>
             <div className="user-profile-widget">
               <span className="welcome-text">Привіт, {user.username}!</span>
               <button onClick={() => navigate('/profile')} className="avatar-button">
@@ -113,45 +115,52 @@ function App() {
 
           <main className="dashboard-main">
             
-            <section className="dashboard-card join-card">
-              <h2>Приєднатися до зустрічі</h2>
-              <div className="join-form">
-                <input 
-                  type="text" 
-                  placeholder="Введіть код кімнати" 
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value)}
-                  className="dashboard-input"
-                />
-                <button onClick={handleJoinByCode} className="dash-btn primary-btn">
-                  🔗 Приєднатися
-                </button>
-              </div>
-            </section>
+            <div className="dashboard-left-group">
+              <section className="dashboard-card join-card">
+                <h2>Приєднатися до зустрічі</h2>
+                <div className="join-form">
+                  <input 
+                    type="text" 
+                    placeholder="Введіть код кімнати" 
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value)}
+                    className="dashboard-input"
+                  />
+                  <button onClick={handleJoinByCode} className="dash-btn primary-btn">
+                    Приєднатися
+                  </button>
+                </div>
+              </section>
 
-            <section className="dashboard-card meetings-card">
-              <h2>Мої зустрічі</h2>
-              <div className="card-buttons">
-                <button onClick={handleQuickMeeting} className="dash-btn success-btn">
-                  🎥 Швидка зустріч
-                </button>
-                <button onClick={() => navigate('/meetings')} className="dash-btn secondary-btn">
-                  📅 Заплановані зустрічі
-                </button>
-              </div>
-            </section>
+              <section className="dashboard-card meetings-card">
+                <h2>Мої зустрічі</h2>
+                <div className="card-buttons">
+                  <button onClick={handleQuickMeeting} className="dash-btn success-btn">
+                    Швидка зустріч
+                  </button>
+                  <button onClick={() => navigate('/meetings')} className="dash-btn secondary-btn">
+                    Заплановані зустрічі
+                  </button>
+                </div>
+              </section>
+            </div>
 
-            <section className="dashboard-card comms-card">
-              <h2>Зв'язок</h2>
-              <div className="card-buttons">
-                <button onClick={() => navigate('/notifications')} className="dash-btn secondary-btn">
-                  🔔 Сповіщення
-                </button>
-                <button onClick={() => navigate('/chats')} className="dash-btn secondary-btn">
-                  💬 Чати
-                </button>
+            <div className="dashboard-right-group">
+              <section className="dashboard-card comms-card">
+                <div className="card-buttons">
+                  <button onClick={() => navigate('/notifications')} className="dash-btn secondary-btn">
+                    Сповіщення
+                  </button>
+                  <button onClick={() => navigate('/chats')} className="dash-btn secondary-btn">
+                    Чати
+                  </button>
+                </div>
+              </section>
+
+              <div className="dashboard-gif-container">
+                <img src="/cat.gif" alt="cat" />
               </div>
-            </section>
+            </div>
 
           </main>
         </div>
