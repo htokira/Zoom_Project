@@ -50,7 +50,7 @@ export default function MeetingRoom() {
     const initCall = async () => {
       try {
         const myStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
+          video: { width: 320, height: 240, frameRate: 15 },
           audio: true,
         });
         myStreamRef.current = myStream;
