@@ -15,7 +15,7 @@ const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
       }
     }, [stream]);
   
-    return <video ref={videoRef} autoPlay style={{ width: '300px' }} />;
+    return <video ref={videoRef} autoPlay style={{ width: '100%', height: '100%', objectFit: 'contain' }} />;
 };
 
 export default function MeetingRoom() {
@@ -151,24 +151,69 @@ export default function MeetingRoom() {
     }
   }
 
+  const participantCount = Object.keys(peers).length + 1;
+  const columns = Math.ceil(Math.sqrt(participantCount));
+  const rows = Math.ceil(participantCount / columns);
+
+  const videoWrapperStyle: React.CSSProperties = {
+    position: 'relative',
+    background: '#000',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+  };
+
+  const nameLabelStyle: React.CSSProperties = {
+    position: 'absolute',
+    bottom: '10px',
+    left: '10px',
+    background: 'rgba(0, 0, 0, 0.6)',
+    color: 'white',
+    padding: '4px 10px',
+    borderRadius: '6px',
+    margin: 0,
+    fontSize: '14px',
+    zIndex: 10
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Відео та Чат */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <div style={{ flex: 1, padding: '20px' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
-                  <div style={{ textAlign: 'center' }}>
-                      <p>Ви (Я)</p>
-                      <video ref={myVideoRef} autoPlay muted style={{ width: '300px', borderRadius: '8px', transform: 'scaleX(-1)' }} />
-                  </div>
-                  {Object.entries(peers).map(([peerId, remoteStream]) => (
-                      <div key={peerId} style={{ textAlign: 'center' }}>
-                          <p>Учасник: {peerId.substring(0, 5)}...</p>
-                          <RemoteVideo stream={remoteStream} />
-                      </div>
-                  ))}
-              </div>
-          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px' }}>
+                <div style={{
+                    flex: 1,
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                    gridTemplateRows: `repeat(${rows}, 1fr)`,
+                    gap: '16px',
+                    width: '100%',
+                    height: '100%'
+                }}>
+                    {/* Моє відео */}
+                    <div style={videoWrapperStyle}>
+                        <p style={nameLabelStyle}>Ви (Я)</p>
+                        <video 
+                            ref={myVideoRef} 
+                            autoPlay 
+                            muted 
+                            style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scaleX(-1)' }} 
+                        />
+                    </div>
+
+                    {/* Відео інших учасників */}
+                    {Object.entries(peers).map(([peerId, remoteStream]) => (
+                        <div key={peerId} style={videoWrapperStyle}>
+                            <p style={nameLabelStyle}>{peerId.substring(0, 5)}...</p>
+                            <RemoteVideo stream={remoteStream} />
+                        </div>
+                    ))}
+
+                </div>
+            </div>
 
           <div style={{ width: '300px', borderLeft: '1px solid #ddd', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>
