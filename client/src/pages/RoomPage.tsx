@@ -152,69 +152,113 @@ export default function MeetingRoom() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
-        <div style={{ flex: 1, padding: '20px' }}>
-            <h2>Кімната: {roomCode}</h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <p>Ви (Я)</p>
-                    <video ref={myVideoRef} autoPlay muted style={{ width: '300px', borderRadius: '8px', transform: 'scaleX(-1)' }} />
-                </div>
-                {Object.entries(peers).map(([peerId, remoteStream]) => (
-                    <div key={peerId} style={{ textAlign: 'center' }}>
-                        <p>Учасник: {peerId.substring(0, 5)}...</p>
-                        <RemoteVideo stream={remoteStream} />
-                    </div>
-                ))}
-            </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      {/* Відео та Чат */}
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <div style={{ flex: 1, padding: '20px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+                  <div style={{ textAlign: 'center' }}>
+                      <p>Ви (Я)</p>
+                      <video ref={myVideoRef} autoPlay muted style={{ width: '300px', borderRadius: '8px', transform: 'scaleX(-1)' }} />
+                  </div>
+                  {Object.entries(peers).map(([peerId, remoteStream]) => (
+                      <div key={peerId} style={{ textAlign: 'center' }}>
+                          <p>Учасник: {peerId.substring(0, 5)}...</p>
+                          <RemoteVideo stream={remoteStream} />
+                      </div>
+                  ))}
+              </div>
+          </div>
+
+          <div style={{ width: '300px', borderLeft: '1px solid #ddd', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>
+                  <h3 style={{ margin: 0 }}>Чат зустрічі</h3>
+              </div>
+              <div style={{ flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {messages.map((msg: any, index) => (
+                      <div key={index} style={{
+                          alignSelf: msg.senderId === user.id ? 'flex-end' : 'flex-start',
+                          background: msg.senderId === user.id ? '#4f46e5' : '#f3f4f6',
+                          color: msg.senderId === user.id ? 'white' : 'black',
+                          padding: '8px 12px',
+                          borderRadius: '12px',
+                          maxWidth: '80%',
+                          fontSize: '14px'
+                      }}>
+                          {msg.text}
+                      </div>
+                  ))}
+              </div>
+              <div style={{ padding: '12px', borderTop: '1px solid #ddd', display: 'flex', gap: '8px' }}>
+                  <input
+                      type="text"
+                      placeholder="Повідомлення..."
+                      value={newMessage}
+                      onChange={e => setNewMessage(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                      style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                  />
+                  <input
+                      type="file"
+                      ref={fileInputRef}
+                      style={{ display: 'none' }}
+                      onChange={handleFileUpload}
+                  />
+                  <button
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ padding: '8px 12px', background: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  >
+                      📎
+                  </button>
+                  <button
+                      onClick={handleSendMessage}
+                      style={{ padding: '8px 12px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  >
+                      →
+                  </button>
+              </div>
+          </div>
         </div>
 
-        <div style={{ width: '300px', borderLeft: '1px solid #ddd', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>
-                <h3 style={{ margin: 0 }}>Чат зустрічі</h3>
+        {/* Нижня плажка */}
+        <div style={{ 
+            height: '80px', 
+            background: '#1f2937', 
+            color: 'white', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '0 30px',
+            borderTop: '1px solid #374151'
+        }}>
+            <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                Код кімнати: <span style={{ fontWeight: 'normal', color: '#9ca3af', marginLeft: '8px' }}>{roomCode}</span>
             </div>
-            <div style={{ flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {messages.map((msg: any, index) => (
-                    <div key={index} style={{
-                        alignSelf: msg.senderId === user.id ? 'flex-end' : 'flex-start',
-                        background: msg.senderId === user.id ? '#4f46e5' : '#f3f4f6',
-                        color: msg.senderId === user.id ? 'white' : 'black',
-                        padding: '8px 12px',
-                        borderRadius: '12px',
-                        maxWidth: '80%',
-                        fontSize: '14px'
-                    }}>
-                        {msg.text}
-                    </div>
-                ))}
+            
+            {/* Кнопки керування */}
+            <div style={{ display: 'flex', gap: '20px' }}>
+                <button style={{ 
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                    background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', width: '70px'
+                }}>
+                    <span style={{ fontSize: '24px', marginBottom: '4px' }}>🎤</span>
+                    <span style={{ fontSize: '12px' }}>Мікрофон</span>
+                </button>
+                <button style={{ 
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                    background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', width: '70px'
+                }}>
+                    <span style={{ fontSize: '24px', marginBottom: '4px' }}>📷</span>
+                    <span style={{ fontSize: '12px' }}>Камера</span>
+                </button>
             </div>
-            <div style={{ padding: '12px', borderTop: '1px solid #ddd', display: 'flex', gap: '8px' }}>
-                <input
-                    type="text"
-                    placeholder="Повідомлення..."
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                    style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-                />
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileUpload}
-                />
-                <button
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{ padding: '8px 12px', background: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                >
-                    📎
-                </button>
-                <button
-                    onClick={handleSendMessage}
-                    style={{ padding: '8px 12px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                >
-                    →
-                </button>
+
+            {/* Кількість учасників */}
+            <div style={{ fontSize: '16px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                👥 Учасників: 
+                <span style={{ background: '#374151', padding: '4px 12px', borderRadius: '12px', fontWeight: 'bold' }}>
+                    {Object.keys(peers).length + 1}
+                </span>
             </div>
         </div>
     </div>
