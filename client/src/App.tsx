@@ -104,7 +104,7 @@ function App() {
         <div className="dashboard-container">
           
           <header className="dashboard-header">
-            <h1 className="dashboard-logo">Zoom Clone</h1>
+            <h1 className="dashboard-logo">Zummer</h1>
             <div className="user-profile-widget">
               <span className="welcome-text">Привіт, {user.username}!</span>
               <button onClick={() => navigate('/profile')} className="avatar-button">

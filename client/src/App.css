@@ -208,7 +208,6 @@
 .dashboard-right-group {
   display: flex;
   flex-direction: column;
-  gap: 30px;
   align-items: center;
 }
 
@@ -336,7 +335,8 @@
 }
 
 .dashboard-gif-container {
-  margin-top: 20px;
+  margin-top: 130px;
+  margin-left: 15px;
   display: flex;
   justify-content: center;
 }
