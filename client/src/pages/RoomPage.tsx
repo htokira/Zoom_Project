@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import Peer from 'peerjs';
-import axios from 'axios'
+import axios from 'axios';
+import microphoneIcon from '../assets/microphone.png';
+import cameraIcon from '../assets/camera.png';
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -286,14 +288,14 @@ export default function MeetingRoom() {
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
                     background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', width: '70px'
                 }}>
-                    <span style={{ fontSize: '24px', marginBottom: '4px' }}>🎤</span>
+                    <img src={microphoneIcon} alt="Мікрофон" style={{ width: '24px', height: '24px', marginBottom: '4px' }} />
                     <span style={{ fontSize: '12px' }}>Мікрофон</span>
                 </button>
                 <button style={{ 
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
                     background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', width: '70px'
                 }}>
-                    <span style={{ fontSize: '24px', marginBottom: '4px' }}>📷</span>
+                    <img src={cameraIcon} alt="Камера" style={{ width: '24px', height: '24px', marginBottom: '4px' }} />
                     <span style={{ fontSize: '12px' }}>Камера</span>
                 </button>
             </div>
