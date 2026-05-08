@@ -75,6 +75,7 @@ export default function MeetingsPage() {
     <div className="page-container">
       <div className="page-content">
         <h1 className="page-title">Зустрічі</h1>
+        
         <div className="glass-card">
           <h2 style={{marginTop: 0, color: '#0b3d60', marginBottom: '20px'}}>Нова зустріч</h2>
           {error && <p style={{ color: '#d93025', fontWeight: 'bold' }}>{error}</p>}
@@ -105,9 +106,10 @@ export default function MeetingsPage() {
             </button>
           </div>
         </div>
-        <div>
-          <h2 style={{color: '#0b3d60', marginBottom: '20px'}}>Заплановані зустрічі</h2>
-          {meetings.length === 0 && <p style={{color: '#1a4f76'}}>Немає зустрічей</p>}
+
+        <div className="glass-card">
+          <h2 style={{marginTop: 0, color: '#0b3d60', marginBottom: '20px'}}>Заплановані зустрічі</h2>
+          {meetings.length === 0 && <p style={{color: '#1a4f76', margin: 0}}>Немає зустрічей</p>}
           {meetings.map((meeting: any) => (
             <div key={meeting.id} className="list-item">
               <div className="flex-between">
@@ -130,6 +132,7 @@ export default function MeetingsPage() {
             </div>
           ))}
         </div>
+
       </div>
     </div>
   )
