@@ -127,85 +127,56 @@ export default function ChatsPage() {
         }
     }
     return (
-    <>
+    <div className="page-container">
         {unreadCount > 0 && (
-            <div style={{
-                position: 'fixed',
-                top: '10px',
-                right: '10px',
-                background: '#ef4444',
-                color: 'white',
-                borderRadius: '50%',
-                width: '30px',
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                zIndex: 1000
-            }}>
+            <div className="badge">
                 {unreadCount}
             </div>
         )}
-        <div style={{ display: 'flex', height: '100vh', fontFamily: 'sans-serif' }}>
-            <div style={{ width: '300px', borderRight: '1px solid #ddd', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <h2>Чати</h2>
-                <input
-                    type="text"
-                    placeholder="Назва чату"
-                    value={chatName}
-                    onChange={e => setChatName(e.target.value)}
-                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-                />
-                <input
-                    type="text"
-                    placeholder="Ніки учасників через кому: Oksana, Oleksii"
-                    value={memberUsernames}
-                    onChange={e => setMemberUsernames(e.target.value)}
-                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-                />
-                {chatError && <p style={{ color: 'red', fontSize: '13px' }}>{chatError}</p>}
-                <button
-                    onClick={handleCreateChat}
-                    style={{ padding: '8px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                >
-                    Створити чат
-                </button>
+        <div className="chat-layout">
+            <div className="chat-sidebar">
+                <h2 className="page-title" style={{margin: 0, textAlign: 'left'}}>Чати</h2>
+                <div className="form-group" style={{marginBottom: '10px'}}>
+                    <input
+                        type="text"
+                        placeholder="Назва чату"
+                        value={chatName}
+                        onChange={e => setChatName(e.target.value)}
+                        className="dashboard-input"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Ніки учасників: Oksana, Oleksii"
+                        value={memberUsernames}
+                        onChange={e => setMemberUsernames(e.target.value)}
+                        className="dashboard-input"
+                    />
+                    {chatError && <p style={{ color: '#d93025', fontSize: '13px', fontWeight: 'bold', margin: 0 }}>{chatError}</p>}
+                    <button onClick={handleCreateChat} className="dash-btn primary-btn">
+                        Створити чат
+                    </button>
+                </div>
                 {chats.map((chat: any) => (
                     <div
                         key={chat.id}
                         onClick={() => handleSelectChat(chat.id)}
-                        style={{
-                            padding: '10px',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            background: selectedChat === chat.id ? '#e0e7ff' : '#f3f4f6'
-                        }}
+                        className={selectedChat === chat.id ? "chat-sidebar-item chat-sidebar-item-active" : "chat-sidebar-item"}
                     >
                         {chat.name || `Чат #${chat.id}`}
                     </div>
                 ))}
             </div>
 
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {!selectedChat && <p style={{ color: '#999' }}>Оберіть чат</p>}
+            <div className="chat-main">
+                {selectedChat && <h2 className="chat-header">Чат: {chats.find(c => c.id === selectedChat)?.name || `#${selectedChat}`}</h2>}
+                <div className="chat-messages">
+                    {!selectedChat && <p style={{ color: '#1a4f76', textAlign: 'center', marginTop: '40px', fontSize: '18px' }}>Оберіть чат для спілкування</p>}
                     {messages.map((msg: any, index) => (
-                        <div key={index} style={{
-                            alignSelf: msg.senderId === CURRENT_USER_ID ? 'flex-end' : 'flex-start',
-                            maxWidth: '60%',
-                            display: 'flex',
-                            flexDirection: 'column'
-                        }}>
-                            <div style={{ fontSize: '11px', color: '#999', marginBottom: '2px', textAlign: msg.senderId === CURRENT_USER_ID ? 'right' : 'left' }}>
+                        <div key={index} className={msg.senderId === CURRENT_USER_ID ? "message-wrapper message-mine" : "message-wrapper message-other"}>
+                            <div className="message-sender">
                                 {msg.sender?.username || msg.username || 'Юзер'}
                             </div>
-                            <div style={{
-                                background: msg.senderId === CURRENT_USER_ID ? '#4f46e5' : '#f3f4f6',
-                                color: msg.senderId === CURRENT_USER_ID ? 'white' : 'black',
-                                padding: '8px 12px',
-                                borderRadius: '12px',
-                            }}>
+                            <div className="message-bubble">
                                 {msg.text}
                             </div>
                         </div>
@@ -213,14 +184,14 @@ export default function ChatsPage() {
                 </div>
 
                 {selectedChat && (
-                    <div style={{ padding: '16px', borderTop: '1px solid #ddd', display: 'flex', gap: '8px' }}>
+                    <div className="chat-input-area">
                         <input
                             type="text"
                             placeholder="Повідомлення..."
                             value={newMessage}
                             onChange={e => setNewMessage(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                            style={{ flex: 1, padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
+                            className="dashboard-input"
                         />
                         <input
                             type="file"
@@ -228,22 +199,16 @@ export default function ChatsPage() {
                             style={{ display: 'none' }}
                             onChange={handleFileUpload}
                         />
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            style={{ padding: '10px', background: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                        >
+                        <button onClick={() => fileInputRef.current?.click()} className="icon-btn">
                             📎
                         </button>
-                        <button
-                            onClick={handleSendMessage}
-                            style={{ padding: '10px 20px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                        >
+                        <button onClick={handleSendMessage} className="dash-btn primary-btn" style={{width: 'auto', padding: '0 30px'}}>
                             Надіслати
                         </button>
                     </div>
                 )}
             </div>
         </div>
-    </>
+    </div>
 )
 }
