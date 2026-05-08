@@ -45,19 +45,19 @@ export default function NotificationPage() {
     setNotifications([])
   }
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h1>Сповіщення</h1>
+    <div className="page-container">
+      <div className="page-content glass-card">
+        <div className="flex-between" style={{ marginBottom: '30px' }}>
+            <h1 className="page-title" style={{ margin: 0 }}>Сповіщення</h1>
             {notifications.length > 0 && (
-                <button onClick={handleMarkAsRead}
-                    style={{ padding: '8px 16px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                    Позначити всі як прочитані
+                <button onClick={handleMarkAsRead} className="dash-btn primary-btn" style={{width: 'auto', padding: '10px 20px'}}>
+                    Позначити як прочитані
                 </button>
             )}
         </div>
-        {notifications.length === 0 && <p style={{ color: '#999' }}>Немає нових сповіщень</p>}
+        {notifications.length === 0 && <p style={{ color: '#1a4f76', textAlign: 'center', fontSize: '18px' }}>Немає нових сповіщень</p>}
         {notifications.map((n: any) => (
-            <div key={n.id} style={{ padding: '15px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}>
+            <div key={n.id} className="list-item">
                 {n.type === 'meeting_invite' && (() => {
                     let payload: any = {}
                     try {
@@ -66,23 +66,25 @@ export default function NotificationPage() {
                         payload = { title: n.payload }
                     }
                     return (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <p>📅 Запрошення на зустріч: <strong>{payload.title}</strong></p>
+                        <div className="flex-between">
+                            <p style={{fontSize: '18px', color: '#0b3d60'}}>📅 Запрошення на зустріч: <strong>{payload.title}</strong></p>
                             <button
                                 onClick={() => {
                                     localStorage.setItem('meetingChatId', String(payload.meetingId))
                                     window.location.href = `/room/${payload.roomCode}`
                                 }}
-                                style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                className="dash-btn success-btn"
+                                style={{width: 'auto', padding: '10px 20px'}}
                             >
                                 Приєднатись
                             </button>
                         </div>
                     )
                 })()}
-                <p style={{ color: '#999', fontSize: '12px' }}>{new Date(n.createdAt).toLocaleString('uk-UA')}</p>
+                <p style={{ color: '#3a6b8c', fontSize: '14px' }}>{new Date(n.createdAt).toLocaleString('uk-UA')}</p>
             </div>
         ))}
+      </div>
     </div>
   )
 }

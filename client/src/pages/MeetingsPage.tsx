@@ -72,59 +72,67 @@ export default function MeetingsPage() {
       }
     }
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-      <h1>Зустрічі</h1>
-      <div style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
-        <h2>Нова зустріч</h2>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <input
-            type="text"
-            placeholder="Назва зустрічі"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-          />
-          <input
-            type="datetime-local"
-            value={scheduledAt}
-            onChange={e => setScheduledAt(e.target.value)}
-            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-          />
-          <input
-          type="text"
-          placeholder="Ніки учасників через кому"
-          value={memberUsernames}
-          onChange={e => setMemberUsernames(e.target.value)}
-          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-          />
-          {meetingError && <p style={{ color: 'red', fontSize: '13px' }}>{meetingError}</p>}
-          <button
-            onClick={handleCreateMeeting}
-            style={{ padding: '10px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-            >
-            Створити
-          </button>
-        </div>
-      </div>
-      <div>
-        <h2>Заплановані зустрічі</h2>
-        {meetings.length === 0 && <p>Немає зустрічей</p>}
-        {meetings.map((meeting: any) => (
-          <div key={meeting.id} style={{ padding: '15px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '8px' }}>
-            <h3>{meeting.title}</h3>
-            <p>Час: {new Date(meeting.scheduledAt).toLocaleString('uk-UA')}</p>
-            <p>Код кімнати: <strong>{meeting.roomCode}</strong></p>
-            <button onClick={async () => {
-              localStorage.setItem('meetingChatId', String(meeting.chatId))
-              window.location.href = `/room/${meeting.roomCode}`
-            }}
-            style={{ padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-            >
-              Приєднатись
+    <div className="page-container">
+      <div className="page-content">
+        <h1 className="page-title">Зустрічі</h1>
+        
+        <div className="glass-card">
+          <h2 style={{marginTop: 0, color: '#0b3d60', marginBottom: '20px'}}>Нова зустріч</h2>
+          {error && <p style={{ color: '#d93025', fontWeight: 'bold' }}>{error}</p>}
+          <div className="form-group">
+            <input
+              type="text"
+              placeholder="Назва зустрічі"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="dashboard-input"
+            />
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={e => setScheduledAt(e.target.value)}
+              className="dashboard-input"
+            />
+            <input
+              type="text"
+              placeholder="Ніки учасників через кому"
+              value={memberUsernames}
+              onChange={e => setMemberUsernames(e.target.value)}
+              className="dashboard-input"
+            />
+            {meetingError && <p style={{ color: '#d93025', fontSize: '14px', fontWeight: 'bold' }}>{meetingError}</p>}
+            <button onClick={handleCreateMeeting} className="dash-btn primary-btn">
+              Створити
             </button>
           </div>
-        ))}
+        </div>
+
+        <div className="glass-card">
+          <h2 style={{marginTop: 0, color: '#0b3d60', marginBottom: '20px'}}>Заплановані зустрічі</h2>
+          {meetings.length === 0 && <p style={{color: '#1a4f76', margin: 0}}>Немає зустрічей</p>}
+          {meetings.map((meeting: any) => (
+            <div key={meeting.id} className="list-item">
+              <div className="flex-between">
+                <div>
+                  <h3>{meeting.title}</h3>
+                  <p>Час: {new Date(meeting.scheduledAt).toLocaleString('uk-UA')}</p>
+                  <p>Код кімнати: <strong>{meeting.roomCode}</strong></p>
+                </div>
+                <button 
+                  onClick={async () => {
+                    localStorage.setItem('meetingChatId', String(meeting.chatId))
+                    window.location.href = `/room/${meeting.roomCode}`
+                  }}
+                  className="dash-btn success-btn"
+                  style={{width: 'auto', padding: '10px 24px'}}
+                >
+                  Приєднатись
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
       </div>
     </div>
   )
