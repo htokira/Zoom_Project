@@ -217,8 +217,11 @@ export default function MeetingRoom() {
         }
 
         if (ids.length > 0) {
+            const meetingRes = await axios.get(`${API}/meetings/by-code/${roomCode}`);
+            const meetingId = meetingRes.data.id;
+            
             await axios.post(`${API}/invites`, {
-                meetingId: roomCode, 
+                meetingId: meetingId, 
                 userIds: ids
             });
             setInviteMessage('Запрошення успішно надіслано!');
@@ -366,13 +369,13 @@ export default function MeetingRoom() {
         {/* Нижня плажка */}
         <div style={{ 
             height: '80px', 
-            background: '#1f2937', 
+            background: '#fdf5e6', 
             color: 'white', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between', 
             padding: '0 30px',
-            borderTop: '1px solid #374151'
+            borderTop: '1px solid rgba(0, 75, 100, 0.15)'
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
@@ -424,6 +427,66 @@ export default function MeetingRoom() {
                 </span>
             </div>
         </div>
+        {/* Вікно запрошення */}
+        {isInviteModalOpen && (
+            <div style={{ 
+                position: 'absolute', 
+                bottom: '90px',
+                left: '30px',
+                background: '#1f2937', 
+                border: '1px solid #fdf5e6',
+                padding: '20px', 
+                borderRadius: '12px', 
+                width: '320px', 
+                boxShadow: '0 10px 25px rgba(0, 75, 100, 0.15)', 
+                zIndex: 50 
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h4 style={{ margin: 0, color: 'white', fontSize: '16px' }}>Запросити учасників</h4>
+                    <button 
+                        onClick={() => setIsInviteModalOpen(false)} 
+                        style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '16px' }}
+                    >
+                        ✖
+                    </button>
+                </div>
+                
+                <input 
+                    type="text" 
+                    placeholder="Нікнейми через кому..." 
+                    value={inviteUsernames}
+                    onChange={e => setInviteUsernames(e.target.value)}
+                    style={{ 
+                        width: '100%', padding: '10px', borderRadius: '8px', 
+                        border: '1px solid rgba(0, 75, 100, 0.15)', background: '#111827', 
+                        color: 'white', marginBottom: '12px', boxSizing: 'border-box',
+                        outline: 'none'
+                    }}
+                />
+                
+                {inviteMessage && (
+                    <div style={{ 
+                        fontSize: '13px', 
+                        color: inviteMessage.includes('Помилка') || inviteMessage.includes('не знайдено') ? '#ef4444' : '#10b981', 
+                        marginBottom: '12px' 
+                    }}>
+                        {inviteMessage}
+                    </div>
+                )}
+                
+                <button 
+                    onClick={handleSendInvites} 
+                    style={{ 
+                        width: '100%', padding: '10px', background: '#4f46e5', 
+                        color: 'white', border: 'none', borderRadius: '8px', 
+                        cursor: 'pointer', fontWeight: 'bold' 
+                    }}
+                >
+                    Надіслати запрошення
+                </button>
+            </div>
+        )}
+
     </div>
   );
 }
