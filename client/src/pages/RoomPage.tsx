@@ -7,6 +7,7 @@ import microphoneIcon from '../assets/microphone.png';
 import cameraIcon from '../assets/camera.png';
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
+const API = 'http://localhost:3000/api'
 
 const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,6 +36,10 @@ export default function MeetingRoom() {
 
   const [isMicEnabled, setIsMicEnabled] = useState(true);
   const [peersMicStates, setPeersMicStates] = useState<Record<string, boolean>>({});
+
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteUsernames, setInviteUsernames] = useState('');
+  const [inviteMessage, setInviteMessage] = useState('');
 
   const chatId = Number(localStorage.getItem('meetingChatId'))
 
@@ -188,13 +193,60 @@ export default function MeetingRoom() {
     }
   }
 
+  async function handleSendInvites() {
+    try {
+        setInviteMessage('');
+        const usernames = inviteUsernames.split(',').map(u => u.trim()).filter(u => u);
+        
+        if (usernames.length === 0) {
+            setInviteMessage('Введіть хоча б один нікнейм');
+            return;
+        }
+
+        const ids: number[] = [];
+        for (const username of usernames) {
+            const res = await axios.get(`${API}/auth/users/search?username=${username}`);
+            const found = res.data.find((u: any) => u.username === username);
+            if (!found) {
+                setInviteMessage(`Юзера "${username}" не знайдено`);
+                return;
+            }
+            if (found.id !== user.id) {
+                ids.push(found.id);
+            }
+        }
+
+        if (ids.length > 0) {
+            const meetingRes = await axios.get(`${API}/meetings/by-code/${roomCode}`);
+            const meetingId = meetingRes.data.id;
+            
+            await axios.post(`${API}/invites`, {
+                meetingId: meetingId, 
+                userIds: ids
+            });
+            setInviteMessage('Запрошення успішно надіслано!');
+            setInviteUsernames('');
+            
+            setTimeout(() => {
+                setIsInviteModalOpen(false);
+                setInviteMessage('');
+            }, 2000);
+        } else {
+            setInviteMessage('Немає нових учасників для запрошення');
+        }
+    } catch (err) {
+        setInviteMessage('Помилка при надсиланні запрошення');
+        console.error(err);
+    }
+  }
+
   const participantCount = Object.keys(peers).length + 1;
   const columns = Math.ceil(Math.sqrt(participantCount));
   const rows = Math.ceil(participantCount / columns);
 
   const videoWrapperStyle: React.CSSProperties = {
     position: 'relative',
-    background: '#000',
+    background: ' #0b3d60',
     borderRadius: '12px',
     overflow: 'hidden',
     display: 'flex',
@@ -207,7 +259,7 @@ export default function MeetingRoom() {
     position: 'absolute',
     bottom: '10px',
     left: '10px',
-    background: 'rgba(0, 0, 0, 0.6)',
+    background: ' #0b3d60',
     color: 'white',
     padding: '4px 10px',
     borderRadius: '6px',
@@ -217,7 +269,7 @@ export default function MeetingRoom() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Відео та Чат */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px' }}>
@@ -240,7 +292,7 @@ export default function MeetingRoom() {
                             style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scaleX(-1)' }} 
                         />
                         {!isMicEnabled && (
-                            <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.8)', padding: '4px 8px', borderRadius: '50%', color: 'white' }}>
+                            <div style={{ position: 'absolute', top: '10px', right: '10px', background: ' #ff6b6b', padding: '4px 8px', borderRadius: '50%', color: 'white' }}>
                                 🔇
                             </div>
                         )}
@@ -254,7 +306,7 @@ export default function MeetingRoom() {
                             </p>
                             <RemoteVideo stream={remoteStream} />
                             {peersMicStates[peerId] === false && (
-                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.8)', padding: '4px 8px', borderRadius: '50%', color: 'white', zIndex: 10 }}>
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: ' #ff6b6b', padding: '4px 8px', borderRadius: '50%', color: 'white', zIndex: 10 }}>
                                     🔇
                                 </div>
                             )}
@@ -272,8 +324,8 @@ export default function MeetingRoom() {
                   {messages.map((msg: any, index) => (
                       <div key={index} style={{
                           alignSelf: msg.senderId === user.id ? 'flex-end' : 'flex-start',
-                          background: msg.senderId === user.id ? '#4f46e5' : '#f3f4f6',
-                          color: msg.senderId === user.id ? 'white' : 'black',
+                          background: msg.senderId === user.id ? ' #007bb5' : ' #ffffff',
+                          color: msg.senderId === user.id ? 'white' : ' #333',
                           padding: '8px 12px',
                           borderRadius: '12px',
                           maxWidth: '80%',
@@ -300,13 +352,13 @@ export default function MeetingRoom() {
                   />
                   <button
                       onClick={() => fileInputRef.current?.click()}
-                      style={{ padding: '8px 12px', background: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      style={{ padding: '8px 12px', background: ' #ff6b6b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                   >
                       📎
                   </button>
                   <button
                       onClick={handleSendMessage}
-                      style={{ padding: '8px 12px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      style={{ padding: '8px 12px', background: ' #007bb5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                   >
                       →
                   </button>
@@ -317,16 +369,28 @@ export default function MeetingRoom() {
         {/* Нижня плажка */}
         <div style={{ 
             height: '80px', 
-            background: '#1f2937', 
+            background: ' #fdf5e6', 
             color: 'white', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between', 
             padding: '0 30px',
-            borderTop: '1px solid #374151'
+            borderTop: '1px solid #e0cda7'
         }}>
-            <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                Код кімнати: <span style={{ fontWeight: 'normal', color: '#9ca3af', marginLeft: '8px' }}>{roomCode}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 'bold', color: ' #1a1b1c' }}>
+                    Код: <span style={{ fontWeight: 'bold', color: ' #1a1b1c', marginLeft: '4px' }}>{roomCode}</span>
+                </div>
+                <button 
+                    onClick={() => setIsInviteModalOpen(!isInviteModalOpen)}
+                    style={{ 
+                        background: ' #007bb5', color: 'white', border: 'none', padding: '6px 12px', 
+                        borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold',
+                        display: 'flex', alignItems: 'center', gap: '6px'
+                    }}
+                >
+                    Запросити
+                </button>
             </div>
             
             {/* Кнопки керування */}
@@ -335,15 +399,12 @@ export default function MeetingRoom() {
                     onClick={toggleMic}
                     style={{ 
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                        background: isMicEnabled ? '#374151' : '#ef4444', // Червоний, якщо вимкнено
+                        background: isMicEnabled ? ' #007bb5' : ' #ff6b6b',
                         border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
-                        borderRadius: '12px', transition: 'background 0.2s'
+                        borderRadius: '12px', transition: 'background 0.2s', fontWeight: 'bold'
                     }}>
                     <span style={{ fontSize: '24px', marginBottom: '4px' }}>
                         {isMicEnabled ? '🎤' : '🔇'}
-                    </span>
-                    <span style={{ fontSize: '12px' }}>
-                        {isMicEnabled ? 'Вимкнути' : 'Увімкнути'}
                     </span>
                 </button>
                 <button style={{ 
@@ -356,13 +417,73 @@ export default function MeetingRoom() {
             </div>
 
             {/* Кількість учасників */}
-            <div style={{ fontSize: '16px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', color: ' #1a1b1c', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 👥 Учасників: 
-                <span style={{ background: '#374151', padding: '4px 12px', borderRadius: '12px', fontWeight: 'bold' }}>
+                <span style={{ background: ' #007bb5', padding: '4px 12px', borderRadius: '12px', fontWeight: 'bold', color: 'white' }}>
                     {Object.keys(peers).length + 1}
                 </span>
             </div>
         </div>
+        {/* Вікно запрошення */}
+        {isInviteModalOpen && (
+            <div style={{ 
+                position: 'absolute', 
+                bottom: '90px',
+                left: '30px',
+                background: ' #111827', 
+                border: '1px solid #fdf5e6',
+                padding: '20px', 
+                borderRadius: '12px', 
+                width: '320px', 
+                boxShadow: '0 10px 25px rgba(0, 75, 100, 0.15)', 
+                zIndex: 50 
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h4 style={{ margin: 0, color: 'white', fontSize: '16px' }}>Запросити учасників</h4>
+                    <button 
+                        onClick={() => setIsInviteModalOpen(false)} 
+                        style={{ background: 'transparent', border: 'none', color: ' #9ca3af', cursor: 'pointer', fontSize: '16px' }}
+                    >
+                        ✖
+                    </button>
+                </div>
+                
+                <input 
+                    type="text" 
+                    placeholder="Нікнейми через кому..." 
+                    value={inviteUsernames}
+                    onChange={e => setInviteUsernames(e.target.value)}
+                    style={{ 
+                        width: '100%', padding: '10px', borderRadius: '8px', 
+                        border: '1px solid rgba(0, 75, 100, 0.15)', background: ' #111827', 
+                        color: 'white', marginBottom: '12px', boxSizing: 'border-box',
+                        outline: 'none'
+                    }}
+                />
+                
+                {inviteMessage && (
+                    <div style={{ 
+                        fontSize: '13px', 
+                        color: inviteMessage.includes('Помилка') || inviteMessage.includes('не знайдено') ? '#ef4444' : '#10b981', 
+                        marginBottom: '12px' 
+                    }}>
+                        {inviteMessage}
+                    </div>
+                )}
+                
+                <button 
+                    onClick={handleSendInvites} 
+                    style={{ 
+                        width: '100%', padding: '10px', background: '#4f46e5', 
+                        color: 'white', border: 'none', borderRadius: '8px', 
+                        cursor: 'pointer', fontWeight: 'bold' 
+                    }}
+                >
+                    Надіслати запрошення
+                </button>
+            </div>
+        )}
+
     </div>
   );
 }

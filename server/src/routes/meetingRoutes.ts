@@ -41,4 +41,23 @@ router.get('/meetings/:userId', async(req, res) => {
     res.json(meeting)
 })
 
+router.get('/meetings/by-code/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        
+        const meeting = await prisma.meeting.findUnique({
+            where: { roomCode: code }
+        });
+
+        if (!meeting) {
+            return res.status(404).json({ error: 'Зустріч з таким кодом не знайдена' });
+        }
+
+        res.json(meeting);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Помилка сервера' });
+    }
+});
+
 export default router
