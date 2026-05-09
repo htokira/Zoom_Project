@@ -30,6 +30,7 @@ export default function MeetingRoom() {
   const [peers, setPeers] = useState<Record<string, MediaStream>>({});
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [isMicEnabled, setIsMicEnabled] = useState(true);
 
   const chatId = Number(localStorage.getItem('meetingChatId'))
 
@@ -112,6 +113,16 @@ export default function MeetingRoom() {
       myStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, [roomCode]);
+
+  const toggleMic = () => {
+    if (myStreamRef.current) {
+      const audioTrack = myStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMicEnabled(audioTrack.enabled);
+      }
+    }
+  };
 
   function handleSendMessage() {
     if (!newMessage.trim()) return
@@ -204,6 +215,11 @@ export default function MeetingRoom() {
                             muted 
                             style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scaleX(-1)' }} 
                         />
+                        {!isMicEnabled && (
+                            <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.8)', padding: '4px 8px', borderRadius: '50%', color: 'white' }}>
+                                🔇
+                            </div>
+                        )}
                     </div>
 
                     {/* Відео інших учасників */}
@@ -284,12 +300,20 @@ export default function MeetingRoom() {
             
             {/* Кнопки керування */}
             <div style={{ display: 'flex', gap: '20px' }}>
-                <button style={{ 
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                    background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', width: '70px'
-                }}>
-                    <img src={microphoneIcon} alt="Мікрофон" style={{ width: '24px', height: '24px', marginBottom: '4px' }} />
-                    <span style={{ fontSize: '12px' }}>Мікрофон</span>
+                <button 
+                    onClick={toggleMic}
+                    style={{ 
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                        background: isMicEnabled ? '#374151' : '#ef4444', // Червоний, якщо вимкнено
+                        border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
+                        borderRadius: '12px', transition: 'background 0.2s'
+                    }}>
+                    <span style={{ fontSize: '24px', marginBottom: '4px' }}>
+                        {isMicEnabled ? '🎤' : '🔇'}
+                    </span>
+                    <span style={{ fontSize: '12px' }}>
+                        {isMicEnabled ? 'Вимкнути' : 'Увімкнути'}
+                    </span>
                 </button>
                 <button style={{ 
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
