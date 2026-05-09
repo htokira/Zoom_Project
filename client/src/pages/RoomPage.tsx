@@ -246,7 +246,7 @@ export default function MeetingRoom() {
 
   const videoWrapperStyle: React.CSSProperties = {
     position: 'relative',
-    background: '#000',
+    background: ' #0b3d60',
     borderRadius: '12px',
     overflow: 'hidden',
     display: 'flex',
@@ -259,7 +259,7 @@ export default function MeetingRoom() {
     position: 'absolute',
     bottom: '10px',
     left: '10px',
-    background: 'rgba(0, 0, 0, 0.6)',
+    background: ' #0b3d60',
     color: 'white',
     padding: '4px 10px',
     borderRadius: '6px',
@@ -292,7 +292,7 @@ export default function MeetingRoom() {
                             style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scaleX(-1)' }} 
                         />
                         {!isMicEnabled && (
-                            <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.8)', padding: '4px 8px', borderRadius: '50%', color: 'white' }}>
+                            <div style={{ position: 'absolute', top: '10px', right: '10px', background: ' #ff6b6b', padding: '4px 8px', borderRadius: '50%', color: 'white' }}>
                                 🔇
                             </div>
                         )}
@@ -306,7 +306,7 @@ export default function MeetingRoom() {
                             </p>
                             <RemoteVideo stream={remoteStream} />
                             {peersMicStates[peerId] === false && (
-                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.8)', padding: '4px 8px', borderRadius: '50%', color: 'white', zIndex: 10 }}>
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: ' #ff6b6b', padding: '4px 8px', borderRadius: '50%', color: 'white', zIndex: 10 }}>
                                     🔇
                                 </div>
                             )}
@@ -324,8 +324,8 @@ export default function MeetingRoom() {
                   {messages.map((msg: any, index) => (
                       <div key={index} style={{
                           alignSelf: msg.senderId === user.id ? 'flex-end' : 'flex-start',
-                          background: msg.senderId === user.id ? '#4f46e5' : '#f3f4f6',
-                          color: msg.senderId === user.id ? 'white' : 'black',
+                          background: msg.senderId === user.id ? ' #007bb5' : ' #ffffff',
+                          color: msg.senderId === user.id ? 'white' : ' #333',
                           padding: '8px 12px',
                           borderRadius: '12px',
                           maxWidth: '80%',
@@ -352,13 +352,13 @@ export default function MeetingRoom() {
                   />
                   <button
                       onClick={() => fileInputRef.current?.click()}
-                      style={{ padding: '8px 12px', background: '#6b7280', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      style={{ padding: '8px 12px', background: ' #ff6b6b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                   >
                       📎
                   </button>
                   <button
                       onClick={handleSendMessage}
-                      style={{ padding: '8px 12px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      style={{ padding: '8px 12px', background: ' #007bb5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                   >
                       →
                   </button>
@@ -369,27 +369,27 @@ export default function MeetingRoom() {
         {/* Нижня плажка */}
         <div style={{ 
             height: '80px', 
-            background: '#fdf5e6', 
+            background: ' #fdf5e6', 
             color: 'white', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between', 
             padding: '0 30px',
-            borderTop: '1px solid rgba(0, 75, 100, 0.15)'
+            borderTop: '1px solid #e0cda7'
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                    Код: <span style={{ fontWeight: 'normal', color: '#9ca3af', marginLeft: '4px' }}>{roomCode}</span>
+                <div style={{ fontSize: '16px', fontWeight: 'bold', color: ' #1a1b1c' }}>
+                    Код: <span style={{ fontWeight: 'bold', color: ' #1a1b1c', marginLeft: '4px' }}>{roomCode}</span>
                 </div>
                 <button 
                     onClick={() => setIsInviteModalOpen(!isInviteModalOpen)}
                     style={{ 
-                        background: '#4f46e5', color: 'white', border: 'none', padding: '6px 12px', 
-                        borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500',
+                        background: ' #007bb5', color: 'white', border: 'none', padding: '6px 12px', 
+                        borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold',
                         display: 'flex', alignItems: 'center', gap: '6px'
                     }}
                 >
-                    <span>➕</span> Запросити
+                    Запросити
                 </button>
             </div>
             
@@ -399,15 +399,12 @@ export default function MeetingRoom() {
                     onClick={toggleMic}
                     style={{ 
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                        background: isMicEnabled ? '#374151' : '#ef4444', // Червоний, якщо вимкнено
+                        background: isMicEnabled ? ' #007bb5' : ' #ff6b6b',
                         border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
-                        borderRadius: '12px', transition: 'background 0.2s'
+                        borderRadius: '12px', transition: 'background 0.2s', fontWeight: 'bold'
                     }}>
                     <span style={{ fontSize: '24px', marginBottom: '4px' }}>
                         {isMicEnabled ? '🎤' : '🔇'}
-                    </span>
-                    <span style={{ fontSize: '12px' }}>
-                        {isMicEnabled ? 'Вимкнути' : 'Увімкнути'}
                     </span>
                 </button>
                 <button style={{ 
@@ -420,9 +417,9 @@ export default function MeetingRoom() {
             </div>
 
             {/* Кількість учасників */}
-            <div style={{ fontSize: '16px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', color: ' #1a1b1c', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 👥 Учасників: 
-                <span style={{ background: '#374151', padding: '4px 12px', borderRadius: '12px', fontWeight: 'bold' }}>
+                <span style={{ background: ' #007bb5', padding: '4px 12px', borderRadius: '12px', fontWeight: 'bold', color: 'white' }}>
                     {Object.keys(peers).length + 1}
                 </span>
             </div>
@@ -433,7 +430,7 @@ export default function MeetingRoom() {
                 position: 'absolute', 
                 bottom: '90px',
                 left: '30px',
-                background: '#1f2937', 
+                background: ' #111827', 
                 border: '1px solid #fdf5e6',
                 padding: '20px', 
                 borderRadius: '12px', 
@@ -445,7 +442,7 @@ export default function MeetingRoom() {
                     <h4 style={{ margin: 0, color: 'white', fontSize: '16px' }}>Запросити учасників</h4>
                     <button 
                         onClick={() => setIsInviteModalOpen(false)} 
-                        style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '16px' }}
+                        style={{ background: 'transparent', border: 'none', color: ' #9ca3af', cursor: 'pointer', fontSize: '16px' }}
                     >
                         ✖
                     </button>
@@ -458,7 +455,7 @@ export default function MeetingRoom() {
                     onChange={e => setInviteUsernames(e.target.value)}
                     style={{ 
                         width: '100%', padding: '10px', borderRadius: '8px', 
-                        border: '1px solid rgba(0, 75, 100, 0.15)', background: '#111827', 
+                        border: '1px solid rgba(0, 75, 100, 0.15)', background: ' #111827', 
                         color: 'white', marginBottom: '12px', boxSizing: 'border-box',
                         outline: 'none'
                     }}
