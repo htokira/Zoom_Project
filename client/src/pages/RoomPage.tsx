@@ -27,9 +27,14 @@ export default function MeetingRoom() {
   const peerInstance = useRef<Peer | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const myStreamRef = useRef<MediaStream | null>(null);
+  const [peerNames, setPeerNames] = useState<Record<string, string>>({});
+
   const [peers, setPeers] = useState<Record<string, MediaStream>>({});
-  const [messages, setMessages] = useState<any[]>([])
-  const [newMessage, setNewMessage] = useState('')
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+
+  const [isMicEnabled, setIsMicEnabled] = useState(true);
+  const [peersMicStates, setPeersMicStates] = useState<Record<string, boolean>>({});
 
   const chatId = Number(localStorage.getItem('meetingChatId'))
 
@@ -42,11 +47,16 @@ export default function MeetingRoom() {
 
     const calls = new Map<string, any>();
 
-    const addVideoStream = (userId: string, stream: MediaStream) => {
+    const addVideoStream = (userId: string, stream: MediaStream, userName?: string) => {
       setPeers((prev) => {
         if (prev[userId]) return prev;
         return { ...prev, [userId]: stream as any };
       });
+
+      if (userName) {
+        setPeerNames(prev => ({ ...prev, [userId]: userName }));
+      }
+      setPeersMicStates((prev) => ({ ...prev, [userId]: true }));
     };
 
     const initCall = async () => {
@@ -65,23 +75,28 @@ export default function MeetingRoom() {
         peerInstance.current = peer;
 
         peer.on('open', (id) => {
-          console.log('Мій Peer ID:', id);
-          socket.emit('join-room', roomCode, id);
+          socket.emit('join-room', roomCode, id, user.name || user.username || 'Гість');
         });
 
         peer.on('call', (call) => {
+          const incomingName = (call.metadata as any)?.userName || 'Учасник';
+          
           call.answer(myStream);
           call.on('stream', (remoteStream) => {
-            addVideoStream(call.peer, remoteStream);
+            addVideoStream(call.peer, remoteStream, incomingName);
           });
           calls.set(call.peer, call);
         });
 
-        socket.on('user-connected', (remotePeerId: string) => {
-          console.log('Новий учасник:', remotePeerId);
-          const call = peer.call(remotePeerId, myStream);
+        socket.on('user-connected', (remotePeerId: string, remoteUserName: string) => {
+          console.log('Підключився:', remoteUserName);
+
+          const call = peer.call(remotePeerId, myStream, {
+            metadata: { userName: user.name || user.username || 'Гість' }
+          });
+
           call.on('stream', (remoteStream) => {
-            addVideoStream(remotePeerId, remoteStream);
+            addVideoStream(remotePeerId, remoteStream, remoteUserName);
           });
           calls.set(remotePeerId, call);
         });
@@ -94,6 +109,15 @@ export default function MeetingRoom() {
             delete next[remotePeerId];
             return next;
           });
+          setPeersMicStates((prev) => {
+            const next = { ...prev };
+            delete next[remotePeerId];
+            return next;
+          });
+        });
+
+        socket.on('user-toggled-mic', (remotePeerId: string, isEnabled: boolean) => {
+          setPeersMicStates((prev) => ({ ...prev, [remotePeerId]: isEnabled }));
         });
       } catch (err) {
         console.error('Помилка доступу до камери:', err);
@@ -112,6 +136,17 @@ export default function MeetingRoom() {
       myStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, [roomCode]);
+
+  const toggleMic = () => {
+    if (myStreamRef.current && peerInstance.current) {
+      const audioTrack = myStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMicEnabled(audioTrack.enabled);
+        socketRef.current?.emit('toggle-mic', roomCode, peerInstance.current.id, audioTrack.enabled);
+      }
+    }
+  };
 
   function handleSendMessage() {
     if (!newMessage.trim()) return
@@ -197,20 +232,32 @@ export default function MeetingRoom() {
                 }}>
                     {/* Моє відео */}
                     <div style={videoWrapperStyle}>
-                        <p style={nameLabelStyle}>Ви (Я)</p>
+                        <p style={nameLabelStyle}>{user.name || user.username} (Ви)</p>
                         <video 
                             ref={myVideoRef} 
                             autoPlay 
                             muted 
                             style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scaleX(-1)' }} 
                         />
+                        {!isMicEnabled && (
+                            <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.8)', padding: '4px 8px', borderRadius: '50%', color: 'white' }}>
+                                🔇
+                            </div>
+                        )}
                     </div>
 
                     {/* Відео інших учасників */}
                     {Object.entries(peers).map(([peerId, remoteStream]) => (
                         <div key={peerId} style={videoWrapperStyle}>
-                            <p style={nameLabelStyle}>{peerId.substring(0, 5)}...</p>
+                            <p style={nameLabelStyle}>
+                                {peerNames[peerId] || `Учасник ${peerId.substring(0, 4)}`}
+                            </p>
                             <RemoteVideo stream={remoteStream} />
+                            {peersMicStates[peerId] === false && (
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.8)', padding: '4px 8px', borderRadius: '50%', color: 'white', zIndex: 10 }}>
+                                    🔇
+                                </div>
+                            )}
                         </div>
                     ))}
 
@@ -284,12 +331,20 @@ export default function MeetingRoom() {
             
             {/* Кнопки керування */}
             <div style={{ display: 'flex', gap: '20px' }}>
-                <button style={{ 
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                    background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', width: '70px'
-                }}>
-                    <img src={microphoneIcon} alt="Мікрофон" style={{ width: '24px', height: '24px', marginBottom: '4px' }} />
-                    <span style={{ fontSize: '12px' }}>Мікрофон</span>
+                <button 
+                    onClick={toggleMic}
+                    style={{ 
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                        background: isMicEnabled ? '#374151' : '#ef4444', // Червоний, якщо вимкнено
+                        border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
+                        borderRadius: '12px', transition: 'background 0.2s'
+                    }}>
+                    <span style={{ fontSize: '24px', marginBottom: '4px' }}>
+                        {isMicEnabled ? '🎤' : '🔇'}
+                    </span>
+                    <span style={{ fontSize: '12px' }}>
+                        {isMicEnabled ? 'Вимкнути' : 'Увімкнути'}
+                    </span>
                 </button>
                 <button style={{ 
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
