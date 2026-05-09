@@ -27,10 +27,13 @@ export default function MeetingRoom() {
   const peerInstance = useRef<Peer | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const myStreamRef = useRef<MediaStream | null>(null);
+
   const [peers, setPeers] = useState<Record<string, MediaStream>>({});
-  const [messages, setMessages] = useState<any[]>([])
-  const [newMessage, setNewMessage] = useState('')
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+
   const [isMicEnabled, setIsMicEnabled] = useState(true);
+  const [peersMicStates, setPeersMicStates] = useState<Record<string, boolean>>({});
 
   const chatId = Number(localStorage.getItem('meetingChatId'))
 
@@ -48,6 +51,7 @@ export default function MeetingRoom() {
         if (prev[userId]) return prev;
         return { ...prev, [userId]: stream as any };
       });
+      setPeersMicStates((prev) => ({ ...prev, [userId]: true }));
     };
 
     const initCall = async () => {
@@ -95,6 +99,15 @@ export default function MeetingRoom() {
             delete next[remotePeerId];
             return next;
           });
+          setPeersMicStates((prev) => {
+            const next = { ...prev };
+            delete next[remotePeerId];
+            return next;
+          });
+        });
+
+        socket.on('user-toggled-mic', (remotePeerId: string, isEnabled: boolean) => {
+          setPeersMicStates((prev) => ({ ...prev, [remotePeerId]: isEnabled }));
         });
       } catch (err) {
         console.error('Помилка доступу до камери:', err);
@@ -115,11 +128,12 @@ export default function MeetingRoom() {
   }, [roomCode]);
 
   const toggleMic = () => {
-    if (myStreamRef.current) {
+    if (myStreamRef.current && peerInstance.current) {
       const audioTrack = myStreamRef.current.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
         setIsMicEnabled(audioTrack.enabled);
+        socketRef.current?.emit('toggle-mic', roomCode, peerInstance.current.id, audioTrack.enabled);
       }
     }
   };
@@ -227,6 +241,11 @@ export default function MeetingRoom() {
                         <div key={peerId} style={videoWrapperStyle}>
                             <p style={nameLabelStyle}>{peerId.substring(0, 5)}...</p>
                             <RemoteVideo stream={remoteStream} />
+                            {peersMicStates[peerId] === false && (
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.8)', padding: '4px 8px', borderRadius: '50%', color: 'white', zIndex: 10 }}>
+                                    🔇
+                                </div>
+                            )}
                         </div>
                     ))}
 

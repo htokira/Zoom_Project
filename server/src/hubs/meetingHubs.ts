@@ -11,7 +11,11 @@ export function initMeetingHub(io: Server) {
             socket.on('disconnect', () => {
                 console.log(`Користувач ${peerId} покинув ${roomCode}`);
                 socket.to(roomCode).emit('user-disconnected', peerId);
-          });
+            });
+
+            socket.on('toggle-mic', (roomCode, peerId, isEnabled) => {
+              socket.to(roomCode).emit('user-toggled-mic', peerId, isEnabled);
+            });
         });
       });
 }
