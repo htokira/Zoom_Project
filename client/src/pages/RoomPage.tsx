@@ -27,6 +27,7 @@ export default function MeetingRoom() {
   const peerInstance = useRef<Peer | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const myStreamRef = useRef<MediaStream | null>(null);
+  const [peerNames, setPeerNames] = useState<Record<string, string>>({});
 
   const [peers, setPeers] = useState<Record<string, MediaStream>>({});
   const [messages, setMessages] = useState<any[]>([]);
@@ -46,11 +47,15 @@ export default function MeetingRoom() {
 
     const calls = new Map<string, any>();
 
-    const addVideoStream = (userId: string, stream: MediaStream) => {
+    const addVideoStream = (userId: string, stream: MediaStream, userName?: string) => {
       setPeers((prev) => {
         if (prev[userId]) return prev;
         return { ...prev, [userId]: stream as any };
       });
+
+      if (userName) {
+        setPeerNames(prev => ({ ...prev, [userId]: userName }));
+      }
       setPeersMicStates((prev) => ({ ...prev, [userId]: true }));
     };
 
@@ -70,23 +75,28 @@ export default function MeetingRoom() {
         peerInstance.current = peer;
 
         peer.on('open', (id) => {
-          console.log('Мій Peer ID:', id);
-          socket.emit('join-room', roomCode, id);
+          socket.emit('join-room', roomCode, id, user.name || user.username || 'Гість');
         });
 
         peer.on('call', (call) => {
+          const incomingName = (call.metadata as any)?.userName || 'Учасник';
+          
           call.answer(myStream);
           call.on('stream', (remoteStream) => {
-            addVideoStream(call.peer, remoteStream);
+            addVideoStream(call.peer, remoteStream, incomingName);
           });
           calls.set(call.peer, call);
         });
 
-        socket.on('user-connected', (remotePeerId: string) => {
-          console.log('Новий учасник:', remotePeerId);
-          const call = peer.call(remotePeerId, myStream);
+        socket.on('user-connected', (remotePeerId: string, remoteUserName: string) => {
+          console.log('Підключився:', remoteUserName);
+
+          const call = peer.call(remotePeerId, myStream, {
+            metadata: { userName: user.name || user.username || 'Гість' }
+          });
+
           call.on('stream', (remoteStream) => {
-            addVideoStream(remotePeerId, remoteStream);
+            addVideoStream(remotePeerId, remoteStream, remoteUserName);
           });
           calls.set(remotePeerId, call);
         });
@@ -222,7 +232,7 @@ export default function MeetingRoom() {
                 }}>
                     {/* Моє відео */}
                     <div style={videoWrapperStyle}>
-                        <p style={nameLabelStyle}>Ви (Я)</p>
+                        <p style={nameLabelStyle}>{user.name || user.username} (Ви)</p>
                         <video 
                             ref={myVideoRef} 
                             autoPlay 
@@ -239,7 +249,9 @@ export default function MeetingRoom() {
                     {/* Відео інших учасників */}
                     {Object.entries(peers).map(([peerId, remoteStream]) => (
                         <div key={peerId} style={videoWrapperStyle}>
-                            <p style={nameLabelStyle}>{peerId.substring(0, 5)}...</p>
+                            <p style={nameLabelStyle}>
+                                {peerNames[peerId] || `Учасник ${peerId.substring(0, 4)}`}
+                            </p>
                             <RemoteVideo stream={remoteStream} />
                             {peersMicStates[peerId] === false && (
                                 <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(239, 68, 68, 0.8)', padding: '4px 8px', borderRadius: '50%', color: 'white', zIndex: 10 }}>

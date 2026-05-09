@@ -3,10 +3,10 @@ import { Server, Socket } from 'socket.io';
 export function initMeetingHub(io: Server) {
     io.on('connection', (socket: Socket) => {
         console.log('User connected to socket:', socket.id);
-        socket.on('join-room', (roomCode: string, peerId: string) => {
+        socket.on('join-room', (roomCode: string, peerId: string, userName: string) => {
             console.log(`Користувач ${peerId} увійшов у ${roomCode}`);
             socket.join(roomCode);
-            socket.to(roomCode).emit('user-connected', peerId);
+            socket.to(roomCode).emit('user-connected', peerId, userName);
             
             socket.on('disconnect', () => {
                 console.log(`Користувач ${peerId} покинув ${roomCode}`);
