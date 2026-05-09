@@ -7,6 +7,7 @@ import microphoneIcon from '../assets/microphone.png';
 import cameraIcon from '../assets/camera.png';
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
+const API = 'http://localhost:3000/api'
 
 const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,6 +36,10 @@ export default function MeetingRoom() {
 
   const [isMicEnabled, setIsMicEnabled] = useState(true);
   const [peersMicStates, setPeersMicStates] = useState<Record<string, boolean>>({});
+
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteUsernames, setInviteUsernames] = useState('');
+  const [inviteMessage, setInviteMessage] = useState('');
 
   const chatId = Number(localStorage.getItem('meetingChatId'))
 
@@ -185,6 +190,50 @@ export default function MeetingRoom() {
         socketRef.current?.emit('sendMessage', msg)
     } catch (err) {
         console.error('Помилка завантаження файлу:', err)
+    }
+  }
+
+  async function handleSendInvites() {
+    try {
+        setInviteMessage('');
+        const usernames = inviteUsernames.split(',').map(u => u.trim()).filter(u => u);
+        
+        if (usernames.length === 0) {
+            setInviteMessage('Введіть хоча б один нікнейм');
+            return;
+        }
+
+        const ids: number[] = [];
+        for (const username of usernames) {
+            const res = await axios.get(`${API}/auth/users/search?username=${username}`);
+            const found = res.data.find((u: any) => u.username === username);
+            if (!found) {
+                setInviteMessage(`Юзера "${username}" не знайдено`);
+                return;
+            }
+            if (found.id !== user.id) {
+                ids.push(found.id);
+            }
+        }
+
+        if (ids.length > 0) {
+            await axios.post(`${API}/invites`, {
+                meetingId: roomCode, 
+                userIds: ids
+            });
+            setInviteMessage('Запрошення успішно надіслано!');
+            setInviteUsernames('');
+            
+            setTimeout(() => {
+                setIsInviteModalOpen(false);
+                setInviteMessage('');
+            }, 2000);
+        } else {
+            setInviteMessage('Немає нових учасників для запрошення');
+        }
+    } catch (err) {
+        setInviteMessage('Помилка при надсиланні запрошення');
+        console.error(err);
     }
   }
 
