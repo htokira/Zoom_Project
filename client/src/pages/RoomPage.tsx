@@ -266,7 +266,7 @@ export default function MeetingRoom() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Відео та Чат */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px' }}>
@@ -374,8 +374,20 @@ export default function MeetingRoom() {
             padding: '0 30px',
             borderTop: '1px solid #374151'
         }}>
-            <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                Код кімнати: <span style={{ fontWeight: 'normal', color: '#9ca3af', marginLeft: '8px' }}>{roomCode}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                    Код: <span style={{ fontWeight: 'normal', color: '#9ca3af', marginLeft: '4px' }}>{roomCode}</span>
+                </div>
+                <button 
+                    onClick={() => setIsInviteModalOpen(!isInviteModalOpen)}
+                    style={{ 
+                        background: '#4f46e5', color: 'white', border: 'none', padding: '6px 12px', 
+                        borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500',
+                        display: 'flex', alignItems: 'center', gap: '6px'
+                    }}
+                >
+                    <span>➕</span> Запросити
+                </button>
             </div>
             
             {/* Кнопки керування */}
