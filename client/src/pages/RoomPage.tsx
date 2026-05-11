@@ -504,7 +504,7 @@ export default function MeetingRoom() {
                 <button 
                     onClick={handleSendInvites} 
                     style={{ 
-                        width: '100%', padding: '10px', background: '#4f46e5', 
+                        width: '100%', padding: '10px', background: ' #007bb5', 
                         color: 'white', border: 'none', borderRadius: '8px', 
                         cursor: 'pointer', fontWeight: 'bold' 
                     }}
