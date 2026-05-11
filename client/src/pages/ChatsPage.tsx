@@ -4,10 +4,10 @@ import { io } from 'socket.io-client'
 
 const socket = io('http://localhost:3000')
 const API = 'http://localhost:3000/api'
-const user = JSON.parse(localStorage.getItem('user') || '{}')
-const CURRENT_USER_ID = user.id
 
 export default function ChatsPage() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const CURRENT_USER_ID = user.id
     const [chats, setChats] = useState<any[]>([])
     const [messages, setMessages] = useState<any[]>([])
     const [selectedChat, setSelectedChat] = useState<number | null>(null)
