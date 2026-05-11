@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import Peer from 'peerjs';
 import axios from 'axios';
-import microphoneIcon from '../assets/microphone.png';
 import cameraIcon from '../assets/camera.png';
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -24,6 +23,17 @@ const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
 export default function MeetingRoom() {
   const { roomCode } = useParams();
   const navigate = useNavigate();
+  const [accessError, setAccessError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!user.id) {
+      alert("Будь ласка, спочатку увійдіть у систему!");
+      navigate('/login');
+    }
+  }, [user.id, navigate]);
+
+  if (!user.id) return null;
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const peerInstance = useRef<Peer | null>(null);
@@ -68,6 +78,7 @@ export default function MeetingRoom() {
   useEffect(() => {
     const socket = io('http://localhost:3000', {
         transports: ['websocket'],
+        query: { userId: user.id },
     });
     socketRef.current = socket;
     (window as any)._socket = socket
@@ -110,7 +121,7 @@ export default function MeetingRoom() {
         peerInstance.current = peer;
 
         peer.on('open', (id) => {
-          socket.emit('join-room', roomCode, id, user.name || user.username || 'Гість');
+          socket.emit('join-room', roomCode, id, user.name || user.username || 'Гість', user.id);
         });
 
         peer.on('call', (call) => {
@@ -166,12 +177,30 @@ export default function MeetingRoom() {
         setMessages(prev => [...prev, data])
     })
 
+    socket.on('access-denied', (message: string) => {
+        setAccessError(message);
+        setTimeout(() => navigate('/'), 3000);
+    });
+
     return () => {
       socket.disconnect();
       peerInstance.current?.destroy();
       myStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, [roomCode]);
+  }, [roomCode, navigate]);
+
+  if (accessError) {
+    return (
+      <div style={{ 
+        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+        background: '#111827', color: 'white', flexDirection: 'column' 
+      }}>
+        <h2>Доступ обмежено</h2>
+        <p style={{ color: ' #ef4444' }}>{accessError}</p>
+        <p>Вас буде перенаправлено на головну сторінку...</p>
+      </div>
+    );
+  }
 
   const toggleMic = () => {
     if (myStreamRef.current && peerInstance.current) {
