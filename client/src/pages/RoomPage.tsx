@@ -86,15 +86,19 @@ export default function MeetingRoom() {
     const calls = new Map<string, any>();
 
     const addVideoStream = (userId: string, stream: MediaStream, userName?: string) => {
-      setPeers((prev) => {
-        if (prev[userId]) return prev;
-        return { ...prev, [userId]: stream as any };
-      });
+        setPeers((prev) => {
+            if (prev[userId]) return prev;
+            return { ...prev, [userId]: stream as any };
+        });
 
-      if (userName) {
-        setPeerNames(prev => ({ ...prev, [userId]: userName }));
-      }
-      setPeersMicStates((prev) => ({ ...prev, [userId]: true }));
+        if (userName) {
+            setPeerNames(prev => ({ ...prev, [userId]: userName }));
+        }
+        
+        setPeersMicStates((prev) => {
+            if (prev[userId] !== undefined) return prev;
+            return { ...prev, [userId]: true };
+        });
     };
 
     const initCall = async () => {
@@ -146,6 +150,13 @@ export default function MeetingRoom() {
             addVideoStream(remotePeerId, remoteStream, remoteUserName);
           });
           calls.set(remotePeerId, call);
+        });
+
+        socket.on('initial-mic-states', (states: Record<string, boolean>) => {
+            setPeersMicStates((prev) => ({
+                ...prev,
+                ...states
+            }));
         });
 
         socket.on('user-disconnected', (remotePeerId: string) => {

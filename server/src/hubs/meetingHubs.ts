@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io';
 
 export function initMeetingHub(io: Server) {
     const roomUsers: Record<string, string[]> = {};
+    const roomMicStates: Record<string, Record<string, boolean>> = {};
 
     io.on('connection', (socket: Socket) => {
         const s = socket as any;
@@ -22,11 +23,15 @@ export function initMeetingHub(io: Server) {
             if (!roomUsers[roomCode]) roomUsers[roomCode] = [];
             roomUsers[roomCode].push(userId);
 
+            if (!roomMicStates[roomCode]) roomMicStates[roomCode] = {};
+            roomMicStates[roomCode][peerId] = true;
+
             s.userId = userId;
             s.roomCode = roomCode;
             s.peerId = peerId;
 
             socket.to(roomCode).emit('user-connected', peerId, userName);
+            socket.emit('initial-mic-states', roomMicStates[roomCode]);
         }); 
 
         socket.on('disconnect', () => {
@@ -43,10 +48,21 @@ export function initMeetingHub(io: Server) {
 
               socket.to(roomCode).emit('user-disconnected', peerId);
             }
+            
+            if (roomCode && roomMicStates[roomCode]) {
+              delete roomMicStates[roomCode][peerId];
+              
+              if (Object.keys(roomMicStates[roomCode]).length === 0) {
+                  delete roomMicStates[roomCode];
+              }
+            }
         });
 
         socket.on('toggle-mic', (roomCode, peerId, isEnabled) => {
-           socket.to(roomCode).emit('user-toggled-mic', peerId, isEnabled);
+            if (roomMicStates[roomCode]) {
+              roomMicStates[roomCode][peerId] = isEnabled;
+            }
+            socket.to(roomCode).emit('user-toggled-mic', peerId, isEnabled);
         });
         
       });
