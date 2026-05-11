@@ -3,9 +3,11 @@ import { Server } from "socket.io"
 import { createInvites, updateInviteStatus, getInvitesByMeetingId } from '../repositories/invites.ts'
 import { createNotification } from '../repositories/notifications.ts'
 import { getMeetingById } from '../repositories/meetings.ts'
+import { verifyToken } from '../middleware/authMiddleware.ts'
 
 export function initInviteRoutes(io: Server) {
     const router = Router()
+    router.use(verifyToken);
 
     router.post('/invites', async(req, res) => {
     const {meetingId, userIds} = req.body

@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 
 const API = 'http://localhost:3000/api'
-const user = JSON.parse(localStorage.getItem('user') || '{}')
-const CURRENT_USER_ID = user.id
 
 export default function MeetingsPage() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const CURRENT_USER_ID = user.id
   const [meetings, setMeetings] = useState([])
   const [title, setTitle] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')

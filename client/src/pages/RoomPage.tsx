@@ -5,7 +5,6 @@ import Peer from 'peerjs';
 import axios from 'axios';
 import cameraIcon from '../assets/camera.png';
 
-const user = JSON.parse(localStorage.getItem('user') || '{}')
 const API = 'http://localhost:3000/api'
 
 const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
@@ -21,6 +20,7 @@ const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
 };
 
 export default function MeetingRoom() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const { roomCode } = useParams();
   const navigate = useNavigate();
   const [accessError, setAccessError] = useState<string | null>(null);

@@ -1,5 +1,6 @@
 import { Router } from "express"
 import { saveFiles, getFileById } from '../repositories/files.ts'
+import { verifyToken } from '../middleware/authMiddleware.ts'
 
 import multer from 'multer'
 
@@ -16,6 +17,7 @@ const upload = multer({
 })
 
 const router = Router()
+router.use(verifyToken);
 
 router.post('/files/upload', upload.single('file'), async (req, res) => {
     const messageId = Number(req.body.messageId)
