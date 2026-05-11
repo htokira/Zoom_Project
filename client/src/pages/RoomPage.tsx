@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import Peer from 'peerjs';
 import axios from 'axios';
@@ -23,6 +23,7 @@ const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
 
 export default function MeetingRoom() {
   const { roomCode } = useParams();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null)
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const peerInstance = useRef<Peer | null>(null);
@@ -270,6 +271,12 @@ export default function MeetingRoom() {
     }
   }
 
+  const handleLeaveMeeting = () => {
+    if (window.confirm("Ви впевнені, що хочете покинути зустріч?")) {
+      navigate('/');
+    }
+  };
+
   const participantCount = Object.keys(peers).length + 1;
   const columns = Math.ceil(Math.sqrt(participantCount));
   const rows = Math.ceil(participantCount / columns);
@@ -452,7 +459,19 @@ export default function MeetingRoom() {
                 <span style={{ background: ' #007bb5', padding: '4px 12px', borderRadius: '12px', fontWeight: 'bold', color: 'white' }}>
                     {Object.keys(peers).length + 1}
                 </span>
+
+                <button 
+                    onClick={handleLeaveMeeting}
+                    style={{ 
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                        background: ' #ff6b6b',
+                        border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
+                        borderRadius: '12px', fontWeight: 'bold'
+                    }}>
+                    <span style={{ fontSize: '11px', marginTop: '2px' }}>Вийти</span>
+                </button>
             </div>
+
         </div>
         {/* Вікно запрошення */}
         {isInviteModalOpen && (
