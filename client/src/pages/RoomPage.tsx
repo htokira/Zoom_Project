@@ -43,6 +43,27 @@ export default function MeetingRoom() {
 
   const chatId = Number(localStorage.getItem('meetingChatId'))
 
+  const applyBitrateLimit = (call: any) => {
+    call.on('stream', () => {
+      const pc = call.peerConnection;
+      if (!pc) return;
+
+      const sender = pc.getSenders().find((s: any) => s.track?.kind === 'video');
+      if (sender) {
+        const parameters = sender.getParameters();
+        if (!parameters.encodings || parameters.encodings.length === 0) {
+          parameters.encodings = [{}];
+        }
+
+        parameters.encodings[0].maxBitrate = 150000; 
+        
+        sender.setParameters(parameters)
+          .then(() => console.log('Bitrate limited to 150kbps'))
+          .catch((err: any) => console.error('Bitrate limit error:', err));
+      }
+    });
+  };
+
   useEffect(() => {
     const socket = io('http://localhost:3000', {
         transports: ['websocket'],
@@ -67,7 +88,7 @@ export default function MeetingRoom() {
     const initCall = async () => {
       try {
         const myStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 320, height: 240, frameRate: 15 },
+          video: { width: 320, height: 240, frameRate: 10 },
           audio: true,
         });
         myStreamRef.current = myStream;
@@ -76,7 +97,15 @@ export default function MeetingRoom() {
           myVideoRef.current.srcObject = myStream;
         }
 
-        const peer = new Peer();
+        const peer = new Peer(undefined as any, {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+            ],
+            sdpSemantics: 'unified-plan'
+          }
+        });
         peerInstance.current = peer;
 
         peer.on('open', (id) => {
@@ -87,6 +116,7 @@ export default function MeetingRoom() {
           const incomingName = (call.metadata as any)?.userName || 'Учасник';
           
           call.answer(myStream);
+          applyBitrateLimit(call);
           call.on('stream', (remoteStream) => {
             addVideoStream(call.peer, remoteStream, incomingName);
           });
@@ -99,7 +129,7 @@ export default function MeetingRoom() {
           const call = peer.call(remotePeerId, myStream, {
             metadata: { userName: user.name || user.username || 'Гість' }
           });
-
+          applyBitrateLimit(call);
           call.on('stream', (remoteStream) => {
             addVideoStream(remotePeerId, remoteStream, remoteUserName);
           });
