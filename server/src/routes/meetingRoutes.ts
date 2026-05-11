@@ -2,10 +2,12 @@ import { Router } from "express"
 import { PrismaClient } from "@prisma/client"
 import { createMeeting, getMeetingByUserId, getMeetingById } from '../repositories/meetings.ts'
 import { createChat } from '../repositories/chats.ts'
+import { verifyToken } from '../middleware/authMiddleware.ts'
 
 const prisma = new PrismaClient()
 
 const router = Router()
+router.use(verifyToken);
 
 router.post('/meetings', async (req, res) => {
     const { title, scheduledAt, createdBy } = req.body

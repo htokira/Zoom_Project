@@ -1,9 +1,11 @@
 import { Router } from "express"
 import { Server } from "socket.io"
 import { getChatByUserId, createChat, getMessages, createPrivateChat, saveMessage } from '../repositories/chats.ts'
+import { verifyToken } from '../middleware/authMiddleware.ts'
 
 export function initChatRoutes(io: Server) {
     const router = Router()
+    router.use(verifyToken);
 
     router.post('/chats/private', async (req, res) => {
         const { userId1, userId2 } = req.body
