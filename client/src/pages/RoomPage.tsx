@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import Peer from 'peerjs';
 import axios from 'axios';
-import microphoneIcon from '../assets/microphone.png';
 import cameraIcon from '../assets/camera.png';
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -23,6 +22,18 @@ const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
 
 export default function MeetingRoom() {
   const { roomCode } = useParams();
+  const navigate = useNavigate();
+  const [accessError, setAccessError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!user.id) {
+      alert("Будь ласка, спочатку увійдіть у систему!");
+      navigate('/login');
+    }
+  }, [user.id, navigate]);
+
+  if (!user.id) return null;
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const myVideoRef = useRef<HTMLVideoElement>(null);
   const peerInstance = useRef<Peer | null>(null);
@@ -43,9 +54,31 @@ export default function MeetingRoom() {
 
   const chatId = Number(localStorage.getItem('meetingChatId'))
 
+  const applyBitrateLimit = (call: any) => {
+    call.on('stream', () => {
+      const pc = call.peerConnection;
+      if (!pc) return;
+
+      const sender = pc.getSenders().find((s: any) => s.track?.kind === 'video');
+      if (sender) {
+        const parameters = sender.getParameters();
+        if (!parameters.encodings || parameters.encodings.length === 0) {
+          parameters.encodings = [{}];
+        }
+
+        parameters.encodings[0].maxBitrate = 150000; 
+        
+        sender.setParameters(parameters)
+          .then(() => console.log('Bitrate limited to 150kbps'))
+          .catch((err: any) => console.error('Bitrate limit error:', err));
+      }
+    });
+  };
+
   useEffect(() => {
     const socket = io('http://localhost:3000', {
         transports: ['websocket'],
+        query: { userId: user.id },
     });
     socketRef.current = socket;
     (window as any)._socket = socket
@@ -53,21 +86,25 @@ export default function MeetingRoom() {
     const calls = new Map<string, any>();
 
     const addVideoStream = (userId: string, stream: MediaStream, userName?: string) => {
-      setPeers((prev) => {
-        if (prev[userId]) return prev;
-        return { ...prev, [userId]: stream as any };
-      });
+        setPeers((prev) => {
+            if (prev[userId]) return prev;
+            return { ...prev, [userId]: stream as any };
+        });
 
-      if (userName) {
-        setPeerNames(prev => ({ ...prev, [userId]: userName }));
-      }
-      setPeersMicStates((prev) => ({ ...prev, [userId]: true }));
+        if (userName) {
+            setPeerNames(prev => ({ ...prev, [userId]: userName }));
+        }
+        
+        setPeersMicStates((prev) => {
+            if (prev[userId] !== undefined) return prev;
+            return { ...prev, [userId]: true };
+        });
     };
 
     const initCall = async () => {
       try {
         const myStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 320, height: 240, frameRate: 15 },
+          video: { width: 320, height: 240, frameRate: 10 },
           audio: true,
         });
         myStreamRef.current = myStream;
@@ -76,17 +113,26 @@ export default function MeetingRoom() {
           myVideoRef.current.srcObject = myStream;
         }
 
-        const peer = new Peer();
+        const peer = new Peer(undefined as any, {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+            ],
+            sdpSemantics: 'unified-plan'
+          }
+        });
         peerInstance.current = peer;
 
         peer.on('open', (id) => {
-          socket.emit('join-room', roomCode, id, user.name || user.username || 'Гість');
+          socket.emit('join-room', roomCode, id, user.name || user.username || 'Гість', user.id);
         });
 
         peer.on('call', (call) => {
           const incomingName = (call.metadata as any)?.userName || 'Учасник';
           
           call.answer(myStream);
+          applyBitrateLimit(call);
           call.on('stream', (remoteStream) => {
             addVideoStream(call.peer, remoteStream, incomingName);
           });
@@ -99,11 +145,18 @@ export default function MeetingRoom() {
           const call = peer.call(remotePeerId, myStream, {
             metadata: { userName: user.name || user.username || 'Гість' }
           });
-
+          applyBitrateLimit(call);
           call.on('stream', (remoteStream) => {
             addVideoStream(remotePeerId, remoteStream, remoteUserName);
           });
           calls.set(remotePeerId, call);
+        });
+
+        socket.on('initial-mic-states', (states: Record<string, boolean>) => {
+            setPeersMicStates((prev) => ({
+                ...prev,
+                ...states
+            }));
         });
 
         socket.on('user-disconnected', (remotePeerId: string) => {
@@ -135,12 +188,30 @@ export default function MeetingRoom() {
         setMessages(prev => [...prev, data])
     })
 
+    socket.on('access-denied', (message: string) => {
+        setAccessError(message);
+        setTimeout(() => navigate('/'), 3000);
+    });
+
     return () => {
       socket.disconnect();
       peerInstance.current?.destroy();
       myStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, [roomCode]);
+  }, [roomCode, navigate]);
+
+  if (accessError) {
+    return (
+      <div style={{ 
+        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+        background: '#111827', color: 'white', flexDirection: 'column' 
+      }}>
+        <h2>Доступ обмежено</h2>
+        <p style={{ color: ' #ef4444' }}>{accessError}</p>
+        <p>Вас буде перенаправлено на головну сторінку...</p>
+      </div>
+    );
+  }
 
   const toggleMic = () => {
     if (myStreamRef.current && peerInstance.current) {
@@ -239,6 +310,12 @@ export default function MeetingRoom() {
         console.error(err);
     }
   }
+
+  const handleLeaveMeeting = () => {
+    if (window.confirm("Ви впевнені, що хочете покинути зустріч?")) {
+      navigate('/');
+    }
+  };
 
   const participantCount = Object.keys(peers).length + 1;
   const columns = Math.ceil(Math.sqrt(participantCount));
@@ -422,7 +499,19 @@ export default function MeetingRoom() {
                 <span style={{ background: ' #007bb5', padding: '4px 12px', borderRadius: '12px', fontWeight: 'bold', color: 'white' }}>
                     {Object.keys(peers).length + 1}
                 </span>
+
+                <button 
+                    onClick={handleLeaveMeeting}
+                    style={{ 
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                        background: ' #ff6b6b',
+                        border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
+                        borderRadius: '12px', fontWeight: 'bold'
+                    }}>
+                    <span style={{ fontSize: '11px', marginTop: '2px' }}>Вийти</span>
+                </button>
             </div>
+
         </div>
         {/* Вікно запрошення */}
         {isInviteModalOpen && (
@@ -474,7 +563,7 @@ export default function MeetingRoom() {
                 <button 
                     onClick={handleSendInvites} 
                     style={{ 
-                        width: '100%', padding: '10px', background: '#4f46e5', 
+                        width: '100%', padding: '10px', background: ' #007bb5', 
                         color: 'white', border: 'none', borderRadius: '8px', 
                         cursor: 'pointer', fontWeight: 'bold' 
                     }}

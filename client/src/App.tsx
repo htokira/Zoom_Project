@@ -41,6 +41,12 @@ function App() {
   }, [user.id])
 
   const handleJoinByCode = () => {
+    const userData = localStorage.getItem('user');
+    if (!userData) {
+        alert('Помилка: користувач не авторизований');
+        return;
+    }
+    
     if (joinCode.trim()) {
       localStorage.removeItem('meetingChatId'); 
       navigate(`/room/${joinCode.trim()}`);
