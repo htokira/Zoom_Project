@@ -47,6 +47,7 @@ export default function MeetingRoom() {
 
   const [isMicEnabled, setIsMicEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [peersMicStates, setPeersMicStates] = useState<Record<string, boolean>>({});
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -235,6 +236,38 @@ export default function MeetingRoom() {
     }
   }
 };
+const toggleScreenShare = async () => {
+  if (!isScreenSharing) {
+    try {
+      // Запитуємо дозвіл на поширення екрана
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+
+      // Відображаємо екран у себе в головному вікні
+      if (myVideoRef.current) {
+        myVideoRef.current.srcObject = screenStream;
+      }
+
+      // Якщо користувач натисне "Stop sharing" у системному вікні браузера
+      screenStream.getVideoTracks()[0].onended = () => {
+        stopScreenShare();
+      };
+
+      setIsScreenSharing(true);
+    } catch (err) {
+      console.error("Error sharing screen:", err);
+    }
+  } else {
+    stopScreenShare();
+  }
+};
+
+const stopScreenShare = () => {
+  // Повертаємо потік з камери назад у вікно
+  if (myVideoRef.current && myStreamRef.current) {
+    myVideoRef.current.srcObject = myStreamRef.current;
+  }
+  setIsScreenSharing(false);
+};
 
   function handleSendMessage() {
     if (!newMessage.trim()) return
@@ -378,7 +411,13 @@ export default function MeetingRoom() {
                             ref={myVideoRef} 
                             autoPlay 
                             muted 
-                            style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scaleX(-1)' }} 
+                            style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'contain', 
+                                // МІНЯЄМО ТІЛЬКИ ТУТ
+                                transform: isScreenSharing ? 'scaleX(1)' : 'scaleX(-1)' 
+                            }} 
                         />
                         {!isMicEnabled && (
                             <div style={{ position: 'absolute', top: '10px', right: '10px', background: ' #ff6b6b', padding: '4px 8px', borderRadius: '50%', color: 'white' }}>
@@ -489,7 +528,7 @@ export default function MeetingRoom() {
                     onClick={toggleMic}
                     style={{ 
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                        background: isMicEnabled ? ' #007bb5' : ' #ff6b6b',
+                        background: isMicEnabled ? ' #103e53' : ' #ff6b6b',
                         border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
                         borderRadius: '12px', transition: 'background 0.2s', fontWeight: 'bold'
                     }}>
@@ -497,7 +536,19 @@ export default function MeetingRoom() {
                         {isMicEnabled ? '🎤' : '🔇'}
                     </span>
                 </button>
-
+                    <button 
+                    onClick={toggleScreenShare}
+                    style={{ 
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                        background: isScreenSharing ? '#10b981' : '#007bb5', // Зелений, якщо трансляція йде
+                        border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
+                        borderRadius: '12px', transition: 'background 0.2s', fontWeight: 'bold'
+                    }}>
+                    <span style={{ fontSize: '24px', marginBottom: '4px' }}>
+                        {isScreenSharing ? '🛑' : '🖥️'} 
+                    </span>
+                    <span style={{ fontSize: '10px' }}>Екран</span>
+                </button>
                 {/* Оновлена Кнопка Камери */}
                 <button 
                     onClick={toggleVideo} // Викликаємо функцію, яку ми створили
