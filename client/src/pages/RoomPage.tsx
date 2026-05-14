@@ -46,6 +46,7 @@ export default function MeetingRoom() {
   const [newMessage, setNewMessage] = useState('');
 
   const [isMicEnabled, setIsMicEnabled] = useState(true);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [peersMicStates, setPeersMicStates] = useState<Record<string, boolean>>({});
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -223,6 +224,17 @@ export default function MeetingRoom() {
       }
     }
   };
+  const toggleVideo = () => {
+  if (myStreamRef.current) {
+    const videoTrack = myStreamRef.current.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      setIsVideoEnabled(videoTrack.enabled);
+      // Якщо хочеш, щоб інші бачили, що ти вимкнула камеру, 
+      // тут можна додати socket.emit, але для початку зробимо локальне вимкнення
+    }
+  }
+};
 
   function handleSendMessage() {
     if (!newMessage.trim()) return
@@ -472,6 +484,7 @@ export default function MeetingRoom() {
             
             {/* Кнопки керування */}
             <div style={{ display: 'flex', gap: '20px' }}>
+                {/* Кнопка Мікрофона (вже є у тебе) */}
                 <button 
                     onClick={toggleMic}
                     style={{ 
@@ -484,12 +497,20 @@ export default function MeetingRoom() {
                         {isMicEnabled ? '🎤' : '🔇'}
                     </span>
                 </button>
-                <button style={{ 
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                    background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', width: '70px'
-                }}>
-                    <img src={cameraIcon} alt="Камера" style={{ width: '24px', height: '24px', marginBottom: '4px' }} />
-                    <span style={{ fontSize: '12px' }}>Камера</span>
+
+                {/* Оновлена Кнопка Камери */}
+                <button 
+                    onClick={toggleVideo} // Викликаємо функцію, яку ми створили
+                    style={{ 
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                        background: isVideoEnabled ? ' #007bb5' : ' #ff6b6b', // Міняє колір: синій/червоний
+                        border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
+                        borderRadius: '12px', transition: 'background 0.2s', fontWeight: 'bold'
+                    }}>
+                    <span style={{ fontSize: '24px', marginBottom: '4px' }}>
+                        {isVideoEnabled ? <img src={cameraIcon} style={{ width: '24px' }} /> : '🚫'} 
+                    </span>
+                    <span style={{ fontSize: '10px' }}>Камера</span>
                 </button>
             </div>
 
