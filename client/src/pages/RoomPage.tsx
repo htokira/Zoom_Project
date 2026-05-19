@@ -8,15 +8,36 @@ import cameraIcon from '../assets/camera.png';
 const API = 'http://localhost:3000/api'
 
 const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-  
-    useEffect(() => {
-      if (videoRef.current && stream) {
-        videoRef.current.srcObject = stream;
-      }
-    }, [stream]);
-  
-    return <video ref={videoRef} autoPlay style={{ width: '100%', height: '100%', objectFit: 'contain' }} />;
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video && stream) {
+      video.srcObject = stream;
+
+      // Додаємо обробники для надійності
+      const handleTrackChange = () => {
+        video.srcObject = stream; // Перепідключаємо, якщо треки змінилися
+      };
+
+      stream.addEventListener('addtrack', handleTrackChange);
+      stream.addEventListener('removetrack', handleTrackChange);
+
+      return () => {
+        stream.removeEventListener('addtrack', handleTrackChange);
+        stream.removeEventListener('removetrack', handleTrackChange);
+      };
+    }
+  }, [stream]);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline // Важливо для мобільних та деяких браузерів
+      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+    />
+  );
 };
 
 export default function MeetingRoom() {
@@ -40,6 +61,11 @@ export default function MeetingRoom() {
   const socketRef = useRef<Socket | null>(null);
   const myStreamRef = useRef<MediaStream | null>(null);
   const [peerNames, setPeerNames] = useState<Record<string, string>>({});
+  const callsRef = useRef<Map<string, any>>(new Map());
+  const [screenStreams, setScreenStreams] = useState<Record<string, MediaStream>>({});
+  const screenCallsRef = useRef<Map<string, any>>(new Map());
+// Цей реф допоможе нам не заплутатися, чий це екран
+ const [screenNames, setScreenNames] = useState<Record<string, string>>({});
 
   const [peers, setPeers] = useState<Record<string, MediaStream>>({});
   const [messages, setMessages] = useState<any[]>([]);
@@ -47,19 +73,29 @@ export default function MeetingRoom() {
 
   const [isMicEnabled, setIsMicEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [peersVideoStates, setPeersVideoStates] = useState<Record<string, boolean>>({});
   const [peersMicStates, setPeersMicStates] = useState<Record<string, boolean>>({});
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteUsernames, setInviteUsernames] = useState('');
   const [inviteMessage, setInviteMessage] = useState('');
+  // Переприв'язуємо відео коли міняється режим (звичайний ↔ zoom з екраном)
+  useEffect(() => {
+    if (myVideoRef.current && myStreamRef.current) {
+      myVideoRef.current.srcObject = myStreamRef.current;
+    }
+  });
 
   const chatId = Number(localStorage.getItem('meetingChatId'))
 
-  const applyBitrateLimit = (call: any) => {
-    call.on('stream', () => {
-      const pc = call.peerConnection;
-      if (!pc) return;
+ const applyBitrateLimit = (call: any) => {
+  // Чекаємо, поки з'єднання реально встановиться
+  const pc = call.peerConnection;
+  if (!pc) return;
 
+  const update = () => {
+    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
       const sender = pc.getSenders().find((s: any) => s.track?.kind === 'video');
       if (sender) {
         const parameters = sender.getParameters();
@@ -67,14 +103,21 @@ export default function MeetingRoom() {
           parameters.encodings = [{}];
         }
 
-        parameters.encodings[0].maxBitrate = 150000; 
-        
+        // Ставимо 1.5 Mbps (для демки екрану це важливо!)
+        parameters.encodings[0].maxBitrate = 1500000; 
+
         sender.setParameters(parameters)
-          .then(() => console.log('Bitrate limited to 150kbps'))
+          .then(() => console.log('Bitrate limited to 1.5Mbps'))
           .catch((err: any) => console.error('Bitrate limit error:', err));
       }
-    });
+    }
   };
+
+  // Слухаємо зміни стану з'єднання
+  pc.oniceconnectionstatechange = update;
+  // На випадок, якщо вже підключено
+  update();
+};
 
   useEffect(() => {
     const socket = io('http://localhost:3000', {
@@ -84,7 +127,7 @@ export default function MeetingRoom() {
     socketRef.current = socket;
     (window as any)._socket = socket
 
-    const calls = new Map<string, any>();
+    
 
     const addVideoStream = (userId: string, stream: MediaStream, userName?: string) => {
         setPeers((prev) => {
@@ -96,92 +139,150 @@ export default function MeetingRoom() {
             setPeerNames(prev => ({ ...prev, [userId]: userName }));
         }
         
-        setPeersMicStates((prev) => {
+        setPeersVideoStates((prev) => {
             if (prev[userId] !== undefined) return prev;
             return { ...prev, [userId]: true };
         });
     };
 
-    const initCall = async () => {
-      try {
-        const myStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 320, height: 240, frameRate: 10 },
-          audio: true,
-        });
-        myStreamRef.current = myStream;
+      const initCall = async () => {
+    try {
+      const myStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 320, height: 240, frameRate: 10 },
+        audio: true,
+      });
+      myStreamRef.current = myStream;
 
-        if (myVideoRef.current) {
-          myVideoRef.current.srcObject = myStream;
+      if (myVideoRef.current) {
+        myVideoRef.current.srcObject = myStream;
+      }
+
+      const peer = new Peer(undefined as any, {
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+          ],
+          sdpSemantics: 'unified-plan'
+        }
+      });
+      peerInstance.current = peer;
+
+      peer.on('open', (id) => {
+        socket.emit('join-room', roomCode, id, user.name || user.username || 'Гість', user.id);
+      });
+
+      peer.on('call', (call) => {
+        const metadata = call.metadata as any;
+        const isScreenCall = metadata?.isScreen; 
+        const incomingName = metadata?.userName || 'Учасник';
+
+        if (isScreenCall) {
+          call.answer();
+        } else {
+          call.answer(myStreamRef.current!); 
         }
 
-        const peer = new Peer(undefined as any, {
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' },
-            ],
-            sdpSemantics: 'unified-plan'
+        call.on('stream', (remoteStream) => {
+          console.log("Отримано потік, isScreen:", isScreenCall);
+          if (isScreenCall) {
+            setScreenStreams(prev => ({ ...prev, [call.peer]: remoteStream }));
+            setScreenNames(prev => ({ ...prev, [call.peer]: `${incomingName} (Екран)` }));
+          } else {
+            addVideoStream(call.peer, remoteStream, incomingName);
           }
         });
-        peerInstance.current = peer;
 
-        peer.on('open', (id) => {
-          socket.emit('join-room', roomCode, id, user.name || user.username || 'Гість', user.id);
-        });
-
-        peer.on('call', (call) => {
-          const incomingName = (call.metadata as any)?.userName || 'Учасник';
-          
-          call.answer(myStream);
-          applyBitrateLimit(call);
-          call.on('stream', (remoteStream) => {
-            addVideoStream(call.peer, remoteStream, incomingName);
+        call.on('close', () => {
+          setScreenStreams(prev => {
+            const next = { ...prev };
+            delete next[call.peer];
+            return next;
           });
-          calls.set(call.peer, call);
         });
+      });
 
-        socket.on('user-connected', (remotePeerId: string, remoteUserName: string) => {
-          console.log('Підключився:', remoteUserName);
+      // ====================== ВСТАВЛЯЄМО ТУТ ======================
+      socket.on('all-users', (users: Array<{peerId: string, userName: string}>) => {
+        console.log('🔄 Already in room:', users);
 
-          const call = peer.call(remotePeerId, myStream, {
+        users.forEach(({ peerId, userName }) => {
+          if (peerId === peerInstance.current?.id) return;
+
+          const call = peerInstance.current!.call(peerId, myStreamRef.current!, {
             metadata: { userName: user.name || user.username || 'Гість' }
           });
+
           applyBitrateLimit(call);
+
           call.on('stream', (remoteStream) => {
-            addVideoStream(remotePeerId, remoteStream, remoteUserName);
+            addVideoStream(peerId, remoteStream, userName);
           });
-          calls.set(remotePeerId, call);
-        });
 
-        socket.on('initial-mic-states', (states: Record<string, boolean>) => {
-            setPeersMicStates((prev) => ({
-                ...prev,
-                ...states
-            }));
+          callsRef.current.set(peerId, call);
         });
+      });
+      // ===========================================================
 
-        socket.on('user-disconnected', (remotePeerId: string) => {
-          calls.get(remotePeerId)?.close();
-          calls.delete(remotePeerId);
-          setPeers((prev) => {
-            const next = { ...prev };
-            delete next[remotePeerId];
-            return next;
-          });
-          setPeersMicStates((prev) => {
-            const next = { ...prev };
-            delete next[remotePeerId];
-            return next;
-          });
-        });
+      socket.on('user-connected', (remotePeerId: string, remoteUserName: string) => {
+        console.log('Підключився:', remoteUserName);
 
-        socket.on('user-toggled-mic', (remotePeerId: string, isEnabled: boolean) => {
-          setPeersMicStates((prev) => ({ ...prev, [remotePeerId]: isEnabled }));
+        const call = peer.call(remotePeerId, myStream, {
+          metadata: { userName: user.name || user.username || 'Гість' }
         });
-      } catch (err) {
-        console.error('Помилка доступу до камери:', err);
-      }
-    };
+        applyBitrateLimit(call);
+        call.on('stream', (remoteStream) => {
+          addVideoStream(remotePeerId, remoteStream, remoteUserName);
+        });
+        callsRef.current.set(remotePeerId, call);
+      });
+
+      socket.on('initial-mic-states', (states: Record<string, boolean>) => {
+        setPeersMicStates((prev) => ({ ...prev, ...states }));
+      });
+      
+      socket.on('user-toggled-video', (remotePeerId: string, isEnabled: boolean) => {
+        setPeersVideoStates((prev) => ({ ...prev, [remotePeerId]: isEnabled }));
+      });
+
+      socket.on('user-started-screen', () => { 
+        console.log("Хтось почав демку...");
+      });
+
+      socket.on('user-stopped-screen', (remotePeerId: string) => {
+        setScreenStreams(prev => {
+          const next = { ...prev };
+          delete next[remotePeerId];
+          return next;
+        });
+      });
+
+      socket.on('user-disconnected', (remotePeerId: string) => {
+        callsRef.current.get(remotePeerId)?.close();
+        callsRef.current.delete(remotePeerId);
+        setPeers((prev) => {
+          const next = { ...prev };
+          delete next[remotePeerId];
+          return next;
+        });
+        setPeersMicStates((prev) => {
+          const next = { ...prev };
+          delete next[remotePeerId];
+          return next;
+        });
+      });
+
+      socket.on('user-toggled-mic', (remotePeerId: string, isEnabled: boolean) => {
+        setPeersMicStates((prev) => ({ ...prev, [remotePeerId]: isEnabled }));
+      });
+      socket.on('user-toggled-video', (remotePeerId: string, isEnabled: boolean) => {
+        setPeersVideoStates((prev) => ({ ...prev, [remotePeerId]: isEnabled }));
+      });
+
+    } catch (err) {
+      console.error('Помилка доступу до камери:', err);
+    }
+  };
 
     initCall();
     socket.emit('joinChat', chatId)
@@ -224,16 +325,68 @@ export default function MeetingRoom() {
       }
     }
   };
-  const toggleVideo = () => {
+ const toggleVideo = () => {
   if (myStreamRef.current) {
     const videoTrack = myStreamRef.current.getVideoTracks()[0];
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled;
       setIsVideoEnabled(videoTrack.enabled);
-      // Якщо хочеш, щоб інші бачили, що ти вимкнула камеру, 
-      // тут можна додати socket.emit, але для початку зробимо локальне вимкнення
+      // Тепер сповіщаємо інших — як і з мікрофоном
+      socketRef.current?.emit(
+        'toggle-video',
+        roomCode,
+        peerInstance.current?.id,
+        videoTrack.enabled
+      );
     }
   }
+};
+const toggleScreenShare = async () => {
+  if (!isScreenSharing) {
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: "always" } as any, // Фікс помилки курсора
+        audio: false
+      });
+
+      // ПОВІДОМЛЯЄМО СЕРВЕР (щоб інші знали, що треба підключитися)
+      socketRef.current?.emit('start-screen-share', roomCode, peerInstance.current?.id);
+
+      Object.keys(peers).forEach(remotePeerId => {
+        const call = peerInstance.current?.call(remotePeerId, screenStream, {
+          metadata: { userName: user.name || user.username, isScreen: true }
+        });
+
+        // ВАЖЛИВО: це має бути ВСЕРЕДИНІ циклу forEach
+        if (call) {
+          screenCallsRef.current.set(remotePeerId, call);
+        }
+      });
+
+      setScreenStreams(prev => ({ ...prev, 'me-screen': screenStream }));
+      setIsScreenSharing(true);
+
+      screenStream.getVideoTracks()[0].onended = () => stopScreenShare();
+    } catch (err) {
+      console.error("Помилка демки:", err);
+    }
+  } else {
+    stopScreenShare();
+  }
+};
+
+const stopScreenShare = () => {
+  // Закриваємо всі "екранні" дзвінки
+  screenCallsRef.current.forEach(call => call.close());
+  screenCallsRef.current.clear();
+  
+  // Прибираємо свій екран з нашої сітки
+  setScreenStreams(prev => {
+    const next = { ...prev };
+    delete next['me-screen'];
+    return next;
+  });
+  setIsScreenSharing(false);
 };
 
   function handleSendMessage() {
@@ -329,9 +482,12 @@ export default function MeetingRoom() {
     }
   };
 
-  const participantCount = Object.keys(peers).length + 1;
-  const columns = Math.ceil(Math.sqrt(participantCount));
-  const rows = Math.ceil(participantCount / columns);
+  // Рахуємо ВСІ вікна: камери + екрани
+// СТАЛО:
+const hasScreenShare = Object.keys(screenStreams).length > 0;
+const totalItems = Object.keys(peers).length + 1 + Object.keys(screenStreams).length;
+const columns = Math.ceil(Math.sqrt(totalItems));
+const rows = Math.ceil(totalItems / columns);
 
   const videoWrapperStyle: React.CSSProperties = {
     position: 'relative',
@@ -362,48 +518,117 @@ export default function MeetingRoom() {
       {/* Відео та Чат */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px' }}>
-                <div style={{
-                    flex: 1,
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                    gridTemplateRows: `repeat(${rows}, 1fr)`,
-                    gap: '16px',
-                    width: '100%',
-                    height: '100%'
-                }}>
-                    {/* Моє відео */}
-                    <div style={videoWrapperStyle}>
-                        <p style={nameLabelStyle}>{user.name || user.username} (Ви)</p>
-                        <video 
-                            ref={myVideoRef} 
-                            autoPlay 
-                            muted 
-                            style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scaleX(-1)' }} 
-                        />
-                        {!isMicEnabled && (
-                            <div style={{ position: 'absolute', top: '10px', right: '10px', background: ' #ff6b6b', padding: '4px 8px', borderRadius: '50%', color: 'white' }}>
-                                🔇
-                            </div>
-                        )}
-                    </div>
+                {hasScreenShare ? (
+  // ===== ZOOM-РЕЖИМ: демка велика, камери зверху =====
+              <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', gap: '8px' }}>
+                
+                {/* Маленькі камери зверху */}
+                <div style={{ display: 'flex', gap: '8px', height: '120px', flexShrink: 0 }}>
+                  {/* Моя камера */}
+                  <div style={{ ...videoWrapperStyle, width: '160px', height: '120px', flexShrink: 0 }}>
+                    <p style={{ ...nameLabelStyle, fontSize: '11px', padding: '2px 6px' }}>
+                      {user.name || user.username} (Ви)
+                    </p>
+                    <video
+                      ref={myVideoRef}
+                      autoPlay
+                      muted
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+                    />
+                    {!isMicEnabled && (
+                      <div style={{ position: 'absolute', top: '4px', right: '4px', background: '#ff6b6b', padding: '2px 4px', borderRadius: '50%', color: 'white', fontSize: '10px' }}>
+                        🔇
+                      </div>
+                    )}
+                  </div>
 
-                    {/* Відео інших учасників */}
-                    {Object.entries(peers).map(([peerId, remoteStream]) => (
-                        <div key={peerId} style={videoWrapperStyle}>
-                            <p style={nameLabelStyle}>
-                                {peerNames[peerId] || `Учасник ${peerId.substring(0, 4)}`}
-                            </p>
-                            <RemoteVideo stream={remoteStream} />
-                            {peersMicStates[peerId] === false && (
-                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: ' #ff6b6b', padding: '4px 8px', borderRadius: '50%', color: 'white', zIndex: 10 }}>
-                                    🔇
-                                </div>
-                            )}
+                  {/* Камери інших */}
+                  {Object.entries(peers).map(([peerId, remoteStream]) => (
+                    <div key={peerId} style={{ ...videoWrapperStyle, width: '160px', height: '120px', flexShrink: 0 }}>
+                      <p style={{ ...nameLabelStyle, fontSize: '11px', padding: '2px 6px' }}>
+                        {peerNames[peerId] || `Учасник`}
+                      </p>
+                      <RemoteVideo stream={remoteStream} />
+                      {peersMicStates[peerId] === false && (
+                        <div style={{ position: 'absolute', top: '4px', right: '4px', background: '#ff6b6b', padding: '2px 4px', borderRadius: '50%', color: 'white', fontSize: '10px' }}>
+                          🔇
                         </div>
-                    ))}
-
+                      )}
+                      {peersVideoStates[peerId] === false && (
+                        <div style={{ position: 'absolute', inset: 0, background: '#0b3d60', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                          <span style={{ fontSize: 24 }}>👤</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
+
+                {/* Великі екрани внизу */}
+                <div style={{ flex: 1, display: 'flex', gap: '8px', overflow: 'hidden' }}>
+                  {Object.entries(screenStreams).map(([id, stream]) => (
+                    <div key={`screen-${id}`} style={{ ...videoWrapperStyle, flex: 1, border: '3px solid #007bb5' }}>
+                      <p style={nameLabelStyle}>
+                        📺 {id === 'me-screen' ? 'Ваш екран' : screenNames[id] || 'Екран учасника'}
+                      </p>
+                      <RemoteVideo stream={stream} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            ) : (
+              // ===== ЗВИЧАЙНИЙ РЕЖИМ: сітка камер =====
+              <div style={{
+                flex: 1,
+                display: 'grid',
+                gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                gridTemplateRows: `repeat(${rows}, 1fr)`,
+                gap: '16px',
+                width: '100%',
+                height: '100%'
+              }}>
+                {/* Моє відео */}
+                <div style={videoWrapperStyle}>
+                  <p style={nameLabelStyle}>{user.name || user.username} (Ви)</p>
+                  <video
+                    ref={myVideoRef}
+                    autoPlay
+                    muted
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', transform: isScreenSharing ? 'scaleX(1)' : 'scaleX(-1)' }}
+                  />
+                  {!isMicEnabled && (
+                    <div style={{ position: 'absolute', top: '10px', right: '10px', background: '#ff6b6b', padding: '4px 8px', borderRadius: '50%', color: 'white' }}>
+                      🔇
+                    </div>
+                  )}
+                </div>
+
+                {/* Відео інших */}
+                {Object.entries(peers).map(([peerId, remoteStream]) => (
+                  <div key={peerId} style={videoWrapperStyle}>
+                    <p style={nameLabelStyle}>
+                      {peerNames[peerId] || `Учасник ${peerId.substring(0, 4)}`}
+                    </p>
+                    <RemoteVideo stream={remoteStream} />
+                    {peersMicStates[peerId] === false && (
+                      <div style={{ position: 'absolute', top: '10px', right: '10px', background: '#ff6b6b', padding: '4px 8px', borderRadius: '50%', color: 'white', zIndex: 10 }}>
+                        🔇
+                      </div>
+                    )}
+                    {peersVideoStates[peerId] === false && (
+                      <div style={{ position: 'absolute', inset: 0, background: '#0b3d60', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', zIndex: 5 }}>
+                        <span style={{ fontSize: 48 }}>👤</span>
+                        <span style={{ fontSize: 13, marginTop: 8, opacity: 0.7 }}>
+                          {peerNames[peerId] || 'Учасник'} вимкнув камеру
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             </div>
+            
 
           <div style={{ width: '300px', borderLeft: '1px solid #ddd', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>
@@ -489,7 +714,7 @@ export default function MeetingRoom() {
                     onClick={toggleMic}
                     style={{ 
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-                        background: isMicEnabled ? ' #007bb5' : ' #ff6b6b',
+                        background: isMicEnabled ? ' #103e53' : ' #ff6b6b',
                         border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
                         borderRadius: '12px', transition: 'background 0.2s', fontWeight: 'bold'
                     }}>
@@ -497,7 +722,19 @@ export default function MeetingRoom() {
                         {isMicEnabled ? '🎤' : '🔇'}
                     </span>
                 </button>
-
+                    <button 
+                    onClick={toggleScreenShare}
+                    style={{ 
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                        background: isScreenSharing ? '#10b981' : '#007bb5', // Зелений, якщо трансляція йде
+                        border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
+                        borderRadius: '12px', transition: 'background 0.2s', fontWeight: 'bold'
+                    }}>
+                    <span style={{ fontSize: '24px', marginBottom: '4px' }}>
+                        {isScreenSharing ? '🛑' : '🖥️'} 
+                    </span>
+                    <span style={{ fontSize: '10px' }}>Екран</span>
+                </button>
                 {/* Оновлена Кнопка Камери */}
                 <button 
                     onClick={toggleVideo} // Викликаємо функцію, яку ми створили
