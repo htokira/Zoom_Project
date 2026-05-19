@@ -19,3 +19,10 @@ export async function getFileById(id: number) {
         where: { id }
     });
 }
+
+export async function getFileByName(fileName: string) {
+    return await prisma.file.findFirst({
+        where: { fileName },
+        orderBy: { id: 'desc' } 
+    });
+}
