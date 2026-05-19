@@ -40,7 +40,7 @@ function App() {
     }
   }, [user.id])
 
-  const handleJoinByCode = () => {
+  const handleJoinByCode = async () => {
     const userData = localStorage.getItem('user');
     if (!userData) {
         alert('Помилка: користувач не авторизований');
@@ -48,12 +48,17 @@ function App() {
     }
     
     if (joinCode.trim()) {
-      localStorage.removeItem('meetingChatId'); 
-      navigate(`/room/${joinCode.trim()}`);
+      try {
+        const res = await axios.get(`http://localhost:3000/api/meetings/by-code/${joinCode.trim()}`);
+        localStorage.setItem('meetingChatId', String(res.data.chatId));
+        navigate(`/room/${joinCode.trim()}`);
+      } catch (err) {
+        alert('Кімнату не знайдено');
+      }
     } else {
       alert('Будь ласка, введіть код кімнати');
     }
-  };
+};
 
   const handleQuickMeeting = async () => {
     const userData = localStorage.getItem('user');

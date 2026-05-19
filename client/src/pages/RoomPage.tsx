@@ -35,7 +35,7 @@ const RemoteVideo = ({ stream }: { stream: MediaStream }) => {
       ref={videoRef}
       autoPlay
       playsInline // Важливо для мобільних та деяких браузерів
-      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
     />
   );
 };
@@ -64,6 +64,7 @@ export default function MeetingRoom() {
   const callsRef = useRef<Map<string, any>>(new Map());
   const [screenStreams, setScreenStreams] = useState<Record<string, MediaStream>>({});
   const screenCallsRef = useRef<Map<string, any>>(new Map());
+  
 // Цей реф допоможе нам не заплутатися, чий це екран
  const [screenNames, setScreenNames] = useState<Record<string, string>>({});
 
@@ -77,17 +78,49 @@ export default function MeetingRoom() {
   const [peersVideoStates, setPeersVideoStates] = useState<Record<string, boolean>>({});
   const [peersMicStates, setPeersMicStates] = useState<Record<string, boolean>>({});
 
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const animFrameIdRef = useRef<number>(0);
+  const hiddenVideosRef = useRef<Map<MediaStream, HTMLVideoElement>>(new Map());
+  const peersRef = useRef(peers);
+  
+  useEffect(() => { peersRef.current = peers; }, [peers]);
+
+  const peerNamesRef = useRef(peerNames);
+  useEffect(() => { peerNamesRef.current = peerNames; }, [peerNames]);
+
+  const screenStreamsRef = useRef(screenStreams);
+  useEffect(() => { screenStreamsRef.current = screenStreams; }, [screenStreams]);
+
+  const screenNamesRef = useRef(screenNames);
+  useEffect(() => { screenNamesRef.current = screenNames; }, [screenNames]);
+  useEffect(() => {
+  chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+}, [messages]);
+
+
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteUsernames, setInviteUsernames] = useState('');
   const [inviteMessage, setInviteMessage] = useState('');
+  const chatBottomRef = useRef<HTMLDivElement>(null);
   // Переприв'язуємо відео коли міняється режим (звичайний ↔ zoom з екраном)
   useEffect(() => {
-    if (myVideoRef.current && myStreamRef.current) {
-      myVideoRef.current.srcObject = myStreamRef.current;
-    }
-  });
+  if (myVideoRef.current && myStreamRef.current) {
+    myVideoRef.current.srcObject = myStreamRef.current;
+  }
+}, [screenStreams]);
 
-  const chatId = Number(localStorage.getItem('meetingChatId'))
+  const [chatId, setChatId] = useState<number>(0);
+
+useEffect(() => {
+  const id = Number(localStorage.getItem('meetingChatId'));
+  if (id) setChatId(id);
+}, []);
 
  const applyBitrateLimit = (call: any) => {
   // Чекаємо, поки з'єднання реально встановиться
@@ -285,7 +318,8 @@ export default function MeetingRoom() {
   };
 
     initCall();
-    socket.emit('joinChat', chatId)
+    const id = Number(localStorage.getItem('meetingChatId'));
+    if (id) socket.emit('joinChat', id);
     socket.on('receiveMessage', (data: any) => {
         setMessages(prev => [...prev, data])
     })
@@ -344,10 +378,15 @@ export default function MeetingRoom() {
 const toggleScreenShare = async () => {
   if (!isScreenSharing) {
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: "always" } as any, // Фікс помилки курсора
-        audio: false
-      });
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: { 
+            cursor: "always",
+            selfBrowserSurface: "exclude", // ← не показує поточну вкладку
+            surfaceSwitching: "exclude",
+          } as any,
+          audio: false,
+          selfBrowserSurface: "exclude", // ← на рівні запиту теж
+        } as any);
 
       // ПОВІДОМЛЯЄМО СЕРВЕР (щоб інші знали, що треба підключитися)
       socketRef.current?.emit('start-screen-share', roomCode, peerInstance.current?.id);
@@ -387,6 +426,146 @@ const stopScreenShare = () => {
     return next;
   });
   setIsScreenSharing(false);
+};
+
+const startRecording = () => {
+  if (!myStreamRef.current) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1280;
+  canvas.height = 720;
+  const ctx = canvas.getContext('2d')!;
+
+  // Створюємо прихований відео-елемент для кожного стріму
+  const createHiddenVideo = (stream: MediaStream): HTMLVideoElement => {
+    const v = document.createElement('video');
+    v.srcObject = stream;
+    v.autoplay = true;
+    v.muted = true;
+    v.playsInline = true;
+    v.style.position = 'fixed';
+    v.style.opacity = '0';
+    v.style.pointerEvents = 'none';
+    v.style.width = '1px';
+    v.style.height = '1px';
+    document.body.appendChild(v);
+    v.play().catch(() => {});
+    return v;
+  };
+
+  const drawFrame = () => {
+    // Збираємо стріми напряму — не з DOM
+    const items: { stream: MediaStream; label: string }[] = [];
+
+    items.push({ stream: myStreamRef.current!, label: user.name || user.username || 'Ви' });
+
+    Object.entries(peersRef.current).forEach(([peerId, stream]) => {
+      items.push({ stream, label: peerNamesRef.current[peerId] || 'Учасник' });
+    });
+
+    Object.entries(screenStreamsRef.current).forEach(([id, stream]) => {
+      items.push({ stream, label: id === 'me-screen' ? 'Ваш екран' : screenNamesRef.current[id] || 'Екран' });
+    });
+
+    // Синхронізуємо прихованi відео
+    items.forEach(({ stream }) => {
+      if (!hiddenVideosRef.current.has(stream)) {
+        hiddenVideosRef.current.set(stream, createHiddenVideo(stream));
+      }
+    });
+
+    // Прибираємо старі
+    hiddenVideosRef.current.forEach((v, stream) => {
+      if (!items.find(i => i.stream === stream)) {
+        v.remove();
+        hiddenVideosRef.current.delete(stream);
+      }
+    });
+
+    const count = items.length || 1;
+    const cols = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / cols);
+    const cellW = canvas.width / cols;
+    const cellH = canvas.height / rows;
+
+    ctx.fillStyle = '#0b3d60';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    items.forEach(({ stream, label }, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = col * cellW;
+      const y = row * cellH;
+
+      const v = hiddenVideosRef.current.get(stream);
+      if (v && v.readyState >= 2) {
+        ctx.drawImage(v, x, y, cellW, cellH);
+      }
+
+      ctx.fillStyle = 'rgba(11, 61, 96, 0.8)';
+      ctx.fillRect(x + 8, y + cellH - 30, ctx.measureText(label).width + 16, 24);
+      ctx.fillStyle = 'white';
+      ctx.font = '14px sans-serif';
+      ctx.fillText(label, x + 16, y + cellH - 12);
+    });
+
+    animFrameIdRef.current = requestAnimationFrame(drawFrame);
+  };
+
+  drawFrame();
+
+  const canvasStream = canvas.captureStream(30);
+  myStreamRef.current.getAudioTracks().forEach(t => canvasStream.addTrack(t));
+
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+    ? 'video/webm;codecs=vp9,opus'
+    : 'video/webm';
+
+  const recorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond: 2_500_000 });
+  mediaRecorderRef.current = recorder;
+  recordingChunksRef.current = [];
+
+  recorder.ondataavailable = (e) => {
+    if (e.data.size > 0) recordingChunksRef.current.push(e.data);
+  };
+
+  recorder.onstop = () => {
+    cancelAnimationFrame(animFrameIdRef.current);
+    // Чистимо всі приховані відео
+    hiddenVideosRef.current.forEach(v => v.remove());
+    hiddenVideosRef.current.clear();
+
+    const blob = new Blob(recordingChunksRef.current, { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `meeting-${new Date().toISOString().slice(0, 19)}.webm`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setRecordingDuration(0);
+  };
+
+  recorder.start(1000);
+  setIsRecording(true);
+
+  let seconds = 0;
+  recordingTimerRef.current = setInterval(() => {
+    seconds += 1;
+    setRecordingDuration(seconds);
+  }, 1000);
+};
+
+const stopRecording = () => {
+  mediaRecorderRef.current?.stop();
+  cancelAnimationFrame(animFrameIdRef.current);
+  if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+  setIsRecording(false);
+};
+
+const formatDuration = (s: number) => {
+  const m = Math.floor(s / 60).toString().padStart(2, '0');
+  const sec = (s % 60).toString().padStart(2, '0');
+  return `${m}:${sec}`;
 };
 
   function handleSendMessage() {
@@ -594,7 +773,7 @@ const rows = Math.ceil(totalItems / columns);
                     ref={myVideoRef}
                     autoPlay
                     muted
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', transform: isScreenSharing ? 'scaleX(1)' : 'scaleX(-1)' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', transform: isScreenSharing ? 'scaleX(1)' : 'scaleX(-1)' }}
                   />
                   {!isMicEnabled && (
                     <div style={{ position: 'absolute', top: '10px', right: '10px', background: '#ff6b6b', padding: '4px 8px', borderRadius: '50%', color: 'white' }}>
@@ -635,6 +814,7 @@ const rows = Math.ceil(totalItems / columns);
                   <h3 style={{ margin: 0 }}>Чат зустрічі</h3>
               </div>
               <div style={{ flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  
                   {messages.map((msg: any, index) => (
                       <div key={index} style={{
                           alignSelf: msg.senderId === user.id ? 'flex-end' : 'flex-start',
@@ -649,6 +829,7 @@ const rows = Math.ceil(totalItems / columns);
                       </div>
                   ))}
               </div>
+              <div ref={chatBottomRef} />
               <div style={{ padding: '12px', borderTop: '1px solid #ddd', display: 'flex', gap: '8px' }}>
                   <input
                       type="text"
@@ -734,6 +915,22 @@ const rows = Math.ceil(totalItems / columns);
                         {isScreenSharing ? '🛑' : '🖥️'} 
                     </span>
                     <span style={{ fontSize: '10px' }}>Екран</span>
+                </button>
+                {/* Кнопка Запису */}
+                <button
+                  onClick={isRecording ? stopRecording : startRecording}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    background: isRecording ? '#dc2626' : '#374151',
+                    border: 'none', color: 'white', cursor: 'pointer', width: '70px', height: '60px',
+                    borderRadius: '12px', transition: 'background 0.2s', fontWeight: 'bold'
+                  }}>
+                  <span style={{ fontSize: '24px', marginBottom: '4px' }}>
+                    {isRecording ? '⏹️' : '⏺️'}
+                  </span>
+                  <span style={{ fontSize: '10px' }}>
+                    {isRecording ? formatDuration(recordingDuration) : 'Запис'}
+                  </span>
                 </button>
                 {/* Оновлена Кнопка Камери */}
                 <button 
