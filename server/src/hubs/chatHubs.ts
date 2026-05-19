@@ -4,7 +4,8 @@ import { createNotification } from '../repositories/notifications.ts'
 
 export function initChatHub(io: Server) {
   io.on('connection', (socket) => {
-    socket.on('joinChat', (chatId) => {
+   socket.on('joinChat', (chatId) => {
+    console.log('joinChat отримано, chatId:', chatId);
     socket.join(`chat_${chatId}`)
 })
     socket.on('joinUser', (userId: number) => {
@@ -12,10 +13,12 @@ export function initChatHub(io: Server) {
 })
 
     socket.on('sendMessage', async (data) => {
-        await saveMessage(data.chatId, data.senderId, data.text)
+    console.log('sendMessage отримано:', data);
+    await saveMessage(data.chatId, data.senderId, data.text)
         const members = await getChatMembers(data.chatId)
         for (const member of members) {
           if (member.userId !== data.senderId) {
+            console.log('Створюємо сповіщення для користувача:', member.userId);
             await createNotification(member.userId, 'new_message', `New notification in chat ${data.chatId}`)
             io.to(`user_${member.userId}`).emit('notification', {
             type: 'new_message',
@@ -23,7 +26,8 @@ export function initChatHub(io: Server) {
         })
     }
 }
-        io.to(`chat_${data.chatId}`).emit('receiveMessage', data)
+        console.log('Емітимо в кімнату:', `chat_${data.chatId}`);
+          io.to(`chat_${data.chatId}`).emit('receiveMessage', data)
     })
     socket.on('disconnect', () => {
       console.log('User disconnected')
