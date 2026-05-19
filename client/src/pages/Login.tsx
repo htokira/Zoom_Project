@@ -38,7 +38,7 @@ export default function Login() {
           <img src="/cat.gif" alt="cat" />
         </div>
 
-        <h2 className="auth-title">Вхід у *супер програмка*</h2>
+        <h2 className="auth-title">Вхід у Zummer </h2>
         
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="input-group">

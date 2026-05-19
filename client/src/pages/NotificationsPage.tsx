@@ -21,20 +21,34 @@ export default function NotificationPage() {
         })
     }
     socket.on('notification', (data: any) => {
-        if (data.type === 'meeting_invite') {
-            setNotifications(prev => [...prev, {
-                id: Date.now(),
-                type: data.type,
-                payload: JSON.stringify({
-                    meetingId: data.meetingId,
-                    roomCode: data.roomCode,
-                    title: data.title
-                }),
-                createdAt: new Date().toISOString(),
-                isRead: false
-            }])
+    if (data.type === 'meeting_invite') {
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
+            type: data.type,
+            payload: JSON.stringify({
+                meetingId: data.meetingId,
+                roomCode: data.roomCode,
+                title: data.title
+            }),
+            createdAt: new Date().toISOString(),
+            isRead: false
+        }])
+    } 
+    else if (data.type === 'new_message') {
+        const payloadObj = {
+            chatId: data.chatId,
+            chatName: data.chatName || `#${data.chatId}`
         }
-    })
+
+        setNotifications(prev => [...prev, {
+            id: Date.now(),
+            type: 'new_message',
+            payload: JSON.stringify(payloadObj),    
+            createdAt: new Date().toISOString(),
+            isRead: false
+        }])
+    }
+})
     return () => {
         socket.off('notification')
         socket.off('connect')
@@ -58,28 +72,50 @@ export default function NotificationPage() {
         {notifications.length === 0 && <p style={{ color: '#1a4f76', textAlign: 'center', fontSize: '18px' }}>Немає нових сповіщень</p>}
         {notifications.map((n: any) => (
             <div key={n.id} className="list-item">
-                {n.type === 'meeting_invite' && (() => {
+                {(() => {
                     let payload: any = {}
-                    try {
-                        payload = JSON.parse(n.payload || '{}')
-                    } catch {
-                        payload = { title: n.payload }
+                    try { payload = JSON.parse(n.payload || '{}') } catch { payload = {} }
+
+                    if (n.type === 'meeting_invite') {
+                        return (
+                            <div className="flex-between">
+                                <p style={{fontSize: '18px', color: '#0b3d60'}}>📅 Запрошення на зустріч: <strong>{payload.title}</strong></p>
+                                <button
+                                    onClick={() => {
+                                        localStorage.setItem('meetingChatId', String(payload.meetingId))
+                                        window.location.href = `/room/${payload.roomCode}`
+                                    }}
+                                    className="dash-btn success-btn"
+                                    style={{width: 'auto', padding: '10px 20px'}}
+                                >
+                                    Приєднатись
+                                </button>
+                            </div>
+                        )
                     }
-                    return (
-                        <div className="flex-between">
-                            <p style={{fontSize: '18px', color: '#0b3d60'}}>📅 Запрошення на зустріч: <strong>{payload.title}</strong></p>
-                            <button
-                                onClick={() => {
-                                    localStorage.setItem('meetingChatId', String(payload.meetingId))
-                                    window.location.href = `/room/${payload.roomCode}`
-                                }}
-                                className="dash-btn success-btn"
-                                style={{width: 'auto', padding: '10px 20px'}}
-                            >
-                                Приєднатись
-                            </button>
-                        </div>
-                    )
+
+                    if (n.type === 'new_message') {
+                        let payload: any = {}
+                        try { 
+                            payload = JSON.parse(n.payload || '{}') 
+                        } catch { 
+                            payload = { chatId: n.payload } 
+                        }
+                        
+                        const chatDisplay = payload.chatName 
+                        ? payload.chatName 
+                        : `#${payload.chatId || ''}`
+                        
+                        return (
+                        <div>
+                            <p style={{fontSize: '18px', color: '#0b3d60', marginBottom: '8px'}}>
+                                💬 Нове повідомлення у чаті <strong>{chatDisplay}</strong>
+                            </p>
+                            {}
+                            </div>
+                            )
+                        }
+                    return null
                 })()}
                 <p style={{ color: '#3a6b8c', fontSize: '14px' }}>{new Date(n.createdAt).toLocaleString('uk-UA')}</p>
             </div>
