@@ -1,39 +1,63 @@
 import { Router } from "express"
-import { saveFiles, getFileById } from '../repositories/files.ts'
+import { saveFiles, getFileByName } from '../repositories/files.ts'
 import { verifyToken } from '../middleware/authMiddleware.ts'
 
 import multer from 'multer'
 
 const storage = multer.diskStorage({
-  destination: 'uploads/',  // папка де зберігаються файли
+  destination: 'uploads/',
   filename: (req, file, cb) => {
-    cb(null, Date.now() + '_' + file.originalname)  // унікальна назва файлу
+    file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8')
+    cb(null, Date.now() + '_' + file.originalname)
   }
 })
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 }  // максимум 20MB
+  limits: { fileSize: 20 * 1024 * 1024 }
 })
 
 const router = Router()
-router.use(verifyToken);
 
-router.post('/files/upload', upload.single('file'), async (req, res) => {
+router.post('/files/upload', verifyToken, upload.single('file'), async (req, res) => {
     const messageId = Number(req.body.messageId)
     const file = req.file  
     if (!file) {
-    res.status(400).json({ error: 'No file' })
-    return
-}
+        res.status(400).json({ error: 'No file' })
+        return
+    }
     const fileId = await saveFiles(messageId, file.originalname, file.path, file.size, file.mimetype)
     res.status(201).json({ id: fileId })
 })
 
-router.get('/files/:id', async (req, res) => {
+router.get('/files/download', verifyToken, async (req, res) => {
+    const fileName = req.query.name as string
+    if (!fileName) {
+        res.status(400).json({ error: 'Назва файлу відсутня' })
+        return
+    }
+
+    try {
+        const file = await getFileByName(fileName)
+        if (!file) {
+            res.status(404).json({ error: 'Файл не знайдено' })
+            return
+        }
+        res.download(file.filePath, file.fileName)
+    } catch (err) {
+        console.error('Download error:', err)
+        res.status(500).json({ error: 'Помилка при завантаженні файлу' })
+    }
+})
+
+router.get('/files/:id', verifyToken, async (req, res) => {
     const id = Number(req.params.id)
-    const file = await getFileById(id)
-    res.download(file.FilePath, file.FileName)
+    const file = await getFileByName(String(id))
+    if (!file) {
+        res.status(404).json({ error: 'Файл не знайдено' })
+        return
+    }
+    res.download(file.filePath, file.fileName)
 })
 
 export default router
