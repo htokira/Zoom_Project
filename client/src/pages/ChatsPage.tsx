@@ -126,6 +126,35 @@ export default function ChatsPage() {
             console.error('Помилка завантаження файлу:', err)
         }
     }
+    
+    async function handleFileDownload(fileName: string) {
+        try {
+            const token = localStorage.getItem('token')
+            const response = await fetch(
+                `${API}/files/download?name=${encodeURIComponent(fileName)}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            )
+            if (!response.ok) {
+                console.error('Помилка завантаження:', response.statusText)
+                return
+            }
+            const blob = await response.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = fileName
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            window.URL.revokeObjectURL(url)
+        } catch (err) {
+            console.error('Помилка при скачуванні файлу:', err)
+        }
+    }
     return (
     <div className="page-container">
         {unreadCount > 0 && (
@@ -177,8 +206,16 @@ export default function ChatsPage() {
                                 {msg.sender?.username || msg.username || 'Юзер'}
                             </div>
                             <div className="message-bubble">
-                                {msg.text}
-                            </div>
+                                    {msg.text?.startsWith('📎') ? (
+                                        // Скачування через fetch з токеном — не через <a href>
+                                        <span
+                                            onClick={() => handleFileDownload(msg.text.replace('📎 ', ''))}
+                                            style={{ color: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}
+                                        >
+                                            {msg.text}
+                                        </span>
+                                    ) : msg.text}
+                                </div>
                         </div>
                     ))}
                 </div>

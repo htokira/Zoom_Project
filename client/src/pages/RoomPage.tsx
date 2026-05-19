@@ -573,13 +573,13 @@ const formatDuration = (s: number) => {
     const msg = {
         chatId: chatId,
         senderId: user.id,
+        username: user.name || user.username || 'Гість',
         text: newMessage
     }
     socketRef.current?.emit('sendMessage', msg)
     setNewMessage('')
   }
-
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (!files || files.length === 0 || !chatId) return
     const file = files[0]
@@ -600,11 +600,40 @@ const formatDuration = (s: number) => {
         const msg = {
             chatId: chatId,
             senderId: user.id,
+            username: user.name || user.username || 'Гість',
             text: `📎 ${file.name}`
         }
         socketRef.current?.emit('sendMessage', msg)
     } catch (err) {
         console.error('Помилка завантаження файлу:', err)
+    }
+  }
+  async function handleFileDownload(fileName: string) {
+    try {
+        const token = localStorage.getItem('token')
+        const response = await fetch(
+            `${API}/files/download?name=${encodeURIComponent(fileName)}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        )
+        if (!response.ok) {
+            console.error('Помилка завантаження:', response.statusText)
+            return
+        }
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = fileName
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        window.URL.revokeObjectURL(url)
+    } catch (err) {
+        console.error('Помилка при скачуванні файлу:', err)
     }
   }
 
@@ -814,22 +843,40 @@ const rows = Math.ceil(totalItems / columns);
                   <h3 style={{ margin: 0 }}>Чат зустрічі</h3>
               </div>
               <div style={{ flex: 1, padding: '12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  
                   {messages.map((msg: any, index) => (
                       <div key={index} style={{
                           alignSelf: msg.senderId === user.id ? 'flex-end' : 'flex-start',
-                          background: msg.senderId === user.id ? ' #007bb5' : ' #ffffff',
-                          color: msg.senderId === user.id ? 'white' : ' #333',
-                          padding: '8px 12px',
-                          borderRadius: '12px',
+                          display: 'flex',
+                          flexDirection: 'column',
                           maxWidth: '80%',
-                          fontSize: '14px'
                       }}>
-                          {msg.text}
+                          <span style={{
+                              fontSize: '11px',
+                              color: '#888',
+                              marginBottom: '2px',
+                              alignSelf: msg.senderId === user.id ? 'flex-end' : 'flex-start'
+                          }}>
+                              {msg.sender?.username || msg.username || 'Гість'}
+                          </span>
+                          <div style={{
+                              background: msg.senderId === user.id ? ' #007bb5' : ' #ffffff',
+                              color: msg.senderId === user.id ? 'white' : ' #333',
+                              padding: '8px 12px',
+                              borderRadius: '12px',
+                              fontSize: '14px'
+                          }}>
+                              {msg.text?.startsWith('📎') ? (
+                                  <span
+                                      onClick={() => handleFileDownload(msg.text.replace('📎 ', ''))}
+                                      style={{ textDecoration: 'underline', cursor: 'pointer', color: 'inherit' }}
+                                  >
+                                      {msg.text}
+                                  </span>
+                              ) : msg.text}
+                          </div>
                       </div>
                   ))}
               </div>
-              <div ref={chatBottomRef} />
               <div style={{ padding: '12px', borderTop: '1px solid #ddd', display: 'flex', gap: '8px' }}>
                   <input
                       type="text"
