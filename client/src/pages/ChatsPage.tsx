@@ -102,31 +102,34 @@ export default function ChatsPage() {
         setNewMessage('')
     }
     async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0]
-        if (!file || !selectedChat) return
-        e.target.value = ''
-        try {
-            const msgRes = await axios.post(`${API}/messages`, {
-                chatId: selectedChat,
-                senderId: CURRENT_USER_ID,
-                text: `📎 ${file.name}`
-            })
-            const messageId = msgRes.data.id
-            const formData = new FormData()
-            formData.append('file', file)
-            formData.append('messageId', String(messageId))
-            await axios.post(`${API}/files/upload`, formData)
-            socket.emit('sendMessage', {
-                chatId: selectedChat,
-                senderId: CURRENT_USER_ID,
-                username: user.username,
-                text: newMessage
-            })
-        } catch (err) {
-            console.error('Помилка завантаження файлу:', err)
+    const file = e.target.files?.[0]
+    if (!file || !selectedChat) return
+    e.target.value = ''
+    try {
+        const msgRes = await axios.post(`${API}/messages`, {
+            chatId: selectedChat,
+            senderId: CURRENT_USER_ID,
+            text: `📎 ${file.name}`
+        })
+        const messageId = msgRes.data.id
+        const newMessage = {
+            id: messageId,
+            chatId: selectedChat,
+            senderId: CURRENT_USER_ID,
+            username: user.username,
+            text: `📎 ${file.name}`,
+            sentAt: new Date().toISOString(),
+            sender: { username: user.username }
         }
+        setMessages(prev => [...prev, newMessage])
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('messageId', String(messageId))
+        await axios.post(`${API}/files/upload`, formData)
+    } catch (err) {
+        console.error('Помилка завантаження файлу:', err)
     }
-    
+}
     async function handleFileDownload(fileName: string) {
         try {
             const token = localStorage.getItem('token')
@@ -155,6 +158,7 @@ export default function ChatsPage() {
             console.error('Помилка при скачуванні файлу:', err)
         }
     }
+
     return (
     <div className="page-container">
         {unreadCount > 0 && (
